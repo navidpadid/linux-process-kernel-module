@@ -1,7 +1,7 @@
 # Linux Process Information Kernel Module
 
-[![CI](https://img.shields.io/github/actions/workflow/status/navidpadid/Linux-Process-Information-Kernel-Module/ci.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=Build)](https://github.com/navidpadid/Linux-Process-Information-Kernel-Module/actions/workflows/ci.yml)
-[![Last Commit](https://img.shields.io/github/last-commit/navidpadid/Linux-Process-Information-Kernel-Module?style=for-the-badge&logo=git&logoColor=white)](https://github.com/navidpadid/Linux-Process-Information-Kernel-Module/commits/main)
+[![CI](https://img.shields.io/github/actions/workflow/status/navidpadid/process-info-kernel-module/ci.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=Build)](https://github.com/navidpadid/process-info-kernel-module/actions/workflows/ci.yml)
+[![Last Commit](https://img.shields.io/github/last-commit/navidpadid/process-info-kernel-module?style=for-the-badge&logo=git&logoColor=white)](https://github.com/navidpadid/process-info-kernel-module/commits/main)
 [![License](https://img.shields.io/badge/License-Dual%20BSD%2FGPL-blue?style=for-the-badge)](LICENSE)
 
 > A Linux kernel module (LKM) with a user-space controller that extracts detailed process information including memory layout and ELF sections.
@@ -255,7 +255,7 @@ This project is licensed under **Dual BSD/GPL** license.
 **Navid Malek**
 
 - Blog: [navidmalek.blog.ir](http://navidmalek.blog.ir)
-- Project: [Linux-Process-Information-Kernel-Module](https://github.com/navidpadid/Linux-Process-Information-Kernel-Module)
+- Project: [process-info-kernel-module](https://github.com/navidpadid/process-info-kernel-module)
 
 ## Contributing
 
