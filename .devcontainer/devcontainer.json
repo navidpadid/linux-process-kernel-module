@@ -1,0 +1,29 @@
+{
+  "name": "kernel-module-devcontainer",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/kernel_module",
+  "remoteUser": "ubuntu",
+  "remoteEnv": {
+    "HOME": "/home/ubuntu"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/ubuntu/.ssh,type=bind,consistency=cached"
+  ],
+  "features": {},
+  "postCreateCommand": "bash -lc 'make --version && gcc --version'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  },
+  "runArgs": [
+    "--privileged"
+  ]
+}

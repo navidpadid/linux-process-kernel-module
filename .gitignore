@@ -1,0 +1,50 @@
+# Build artifacts
+build/
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.symvers
+*.order
+.*.cmd
+.tmp_versions/
+Module.symvers
+modules.order
+
+# Note: Kbuild files are source files and should be tracked by git
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Kernel module specific
+*.markers
+
+# Debug files
+*.dSYM/
+
+# Compiled user programs
+proc_elf_ctrl
+elf_det_ctrl
+
+# Core dumps
+core
+core.*
+
+# Dependency files
+*.d
+
+# Archive files
+*.a
+*.so
+*.so.*
+
+# Backup files
+*.bak
+*.backup
+*~
