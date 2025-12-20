@@ -22,7 +22,7 @@ static int user_pid;    //the desired pid that we get from user
 static int numberOpens = 0; //number of opens(writes) to the pid file
 
 //skip these instances (will be described bellow)
-static struct proc_dir_entry *topsDir, *topsFile, *topsWrite;
+static struct proc_dir_entry *elfdet_dir, *elfdet_det_entry, *elfdet_pid_entry;
 
 static int procfile_open(struct inode *inode, struct file *file);
 static ssize_t procfile_read(struct file*, char*, size_t, loff_t*);
@@ -32,7 +32,7 @@ static ssize_t procfile_write(struct file*, const char*, size_t, loff_t*);
 //det proc file_operations starts
 
 //this function is the base function to gather information from kernel
-static int tops_show(struct seq_file *m, void *v) {
+static int elfdet_show(struct seq_file *m, void *v) {
 	struct task_struct *task;
 	unsigned long bss_start = 0, bss_end = 0;
 	unsigned long elf_header = 0;
@@ -87,13 +87,13 @@ static int tops_show(struct seq_file *m, void *v) {
 }
 
 //runs when openning file
-static int tops_open(struct inode *inode, struct file *file) {
-	return single_open(file, tops_show, NULL); //calling tops_show
+static int elfdet_open(struct inode *inode, struct file *file) {
+	return single_open(file, elfdet_show, NULL); //calling elfdet_show
 }
 
 //file operations of det proc (using proc_ops for kernel 5.6+)
-static const struct proc_ops tops_pops = {
-	.proc_open = tops_open,
+static const struct proc_ops elfdet_det_ops = {
+	.proc_open = elfdet_open,
 	.proc_read = seq_read,
 	.proc_lseek = seq_lseek,
 	.proc_release = single_release,
@@ -152,19 +152,19 @@ static const struct proc_ops write_pops = {
 };
 
 
-static int tops_init(void) {
-	topsDir = proc_mkdir("elf_det", NULL); //creating the directory: elf_det in proc
+static int elfdet_init(void) {
+	elfdet_dir = proc_mkdir("elf_det", NULL); //creating the directory: elf_det in proc
 
-	if (!topsDir) {
+	if (!elfdet_dir) {
 		return -ENOMEM;
 	}	
         //0777 means full premmisions for the file
-	topsFile = proc_create("det", 0777, topsDir, &tops_pops); //create proc file det with tops_pops proc operations
-        printk("det initiated; /proc/elf_det/det created\n");
-	topsWrite = proc_create("pid",0777, topsDir, &write_pops);////create proc file pid with write_pops proc operations
-        printk("pid initiated; /proc/elf_det/pid created\n");
+	elfdet_det_entry = proc_create("det", 0777, elfdet_dir, &elfdet_det_ops); //create proc file det with elfdet_det_ops
+	printk("det initiated; /proc/elf_det/det created\n");
+	elfdet_pid_entry = proc_create("pid", 0777, elfdet_dir, &write_pops); //create proc file pid with write_pops
+	printk("pid initiated; /proc/elf_det/pid created\n");
 
-	if (!topsFile) {
+	if (!elfdet_det_entry) {
 		return -ENOMEM;
 	}
 	
@@ -173,14 +173,14 @@ static int tops_init(void) {
 }
 
 //the remove operations done by module(cleaning up)
-static void tops_exit(void) {
-	proc_remove(topsFile);
-        printk("tops exited; /proc/elf_det/det deleted\n");
-        proc_remove(topsWrite);
-        printk("tops exited; /proc/elf_det/pid deleted\n");
-	proc_remove(topsDir);
+static void elfdet_exit(void) {
+	proc_remove(elfdet_det_entry);
+	printk("elf_det exited; /proc/elf_det/det deleted\n");
+	proc_remove(elfdet_pid_entry);
+	printk("elf_det exited; /proc/elf_det/pid deleted\n");
+	proc_remove(elfdet_dir);
 }
 
 //macros for init and exit
-module_init(tops_init);
-module_exit(tops_exit);
+module_init(elfdet_init);
+module_exit(elfdet_exit);
