@@ -39,6 +39,10 @@ set -e
 cd ~/kernel_module
 
 echo "Installing kernel module..."
+if lsmod | grep -q '^elf_det'; then
+    echo "Module already loaded; unloading first..."
+    sudo rmmod elf_det || true
+fi
 sudo insmod build/elf_det.ko
 
 echo "Checking if module is loaded..."
@@ -56,6 +60,10 @@ echo ""
 echo "Testing with PID 1 (init/systemd)..."
 echo "1" | sudo tee /proc/elf_det/pid > /dev/null
 sudo cat /proc/elf_det/det
+
+echo ""
+echo "Testing with user program (proc_elf_ctrl, PID=1)..."
+./build/proc_elf_ctrl 1 || true
 
 echo ""
 echo "Checking kernel logs..."
