@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include "lib/user_helpers.h"
 
 int main(int argc, char **argv)
 {
@@ -13,17 +14,22 @@ int main(int argc, char **argv)
         strncpy(pid_user, argv[1], sizeof(pid_user) - 1);
         pid_user[sizeof(pid_user) - 1] = '\0';
 
-        fp = fopen("/proc/elf_det/pid","w");
+        char *pid_path = build_proc_path("pid");
+        fp = fopen(pid_path, "w");
         if (!fp) {
             perror("open pid");
+            free(pid_path);
             return 1;
         }
         fprintf(fp,"%s", pid_user);
         fclose(fp);
+        free(pid_path);
 
-        fp = fopen("/proc/elf_det/det","r");
+        char *det_path = build_proc_path("det");
+        fp = fopen(det_path, "r");
         if (!fp) {
             perror("open det");
+            free(det_path);
             return 1;
         }
         if (fgets(buff, sizeof(buff), fp))
@@ -31,6 +37,7 @@ int main(int argc, char **argv)
         if (fgets(buff, sizeof(buff), fp))
             printf("%s\n", buff);
         fclose(fp);
+        free(det_path);
         return 0;
     }
 
@@ -45,18 +52,23 @@ int main(int argc, char **argv)
             break;
         }
 
-        fp = fopen("/proc/elf_det/pid","w");
+        char *pid_path2 = build_proc_path("pid");
+        fp = fopen(pid_path2, "w");
         if (!fp) {
             perror("open pid");
+            free(pid_path2);
             return 1;
         }
         fprintf(fp,"%s", pid_user);
         fclose(fp);
+        free(pid_path2);
 
         printf("the process info is here:\n");
-        fp = fopen("/proc/elf_det/det","r");
+        char *det_path2 = build_proc_path("det");
+        fp = fopen(det_path2, "r");
         if (!fp) {
             perror("open det");
+            free(det_path2);
             return 1;
         }
         if (fgets(buff, sizeof(buff), fp))
@@ -64,6 +76,7 @@ int main(int argc, char **argv)
         if (fgets(buff, sizeof(buff), fp))
             printf("%s\n", buff);
         fclose(fp);
+        free(det_path2);
     }
     return 0;
 }

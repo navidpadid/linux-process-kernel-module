@@ -201,6 +201,7 @@ See [scripts/README.md](scripts/README.md) for detailed QEMU testing documentati
 | `make install` | Install kernel module (requires root) |
 | `make uninstall` | Remove kernel module (requires root) |
 | `make test` | Install module and run user program |
+| `make unit` | Build and run function-level unit tests (no kernel required) |
 | `make clean` | Remove all build artifacts |
 | `make help` | Display help message |
 
@@ -213,7 +214,7 @@ The kernel module creates entries in `/proc/elf_det/`:
 - `/proc/elf_det/det` - Read-only file to retrieve process information
 
 **Key Functions:**
-- `tops_show()` - Main function to gather and format process information
+- `elfdet_show()` - Main function to gather and format process information
 - `procfile_write()` - Handles PID input from user space
 - `procfile_read()` - Returns formatted process data
 
@@ -225,10 +226,23 @@ The kernel module creates entries in `/proc/elf_det/`:
 
 ### User Program (`proc_elf_ctrl.c`)
 
-Simple C program that:
-1. Prompts user for a PID
-2. Writes PID to `/proc/elf_det/pid`
-3. Reads and displays process information from `/proc/elf_det/det`
+Simple C program that supports two modes:
+1. Interactive: prompts for a PID, writes to `/proc/elf_det/pid`, then reads `/proc/elf_det/det` and prints two lines
+2. Argument mode: run `./build/proc_elf_ctrl <PID>` to write the PID and print exactly two lines non-interactively
+
+You can override the proc directory for testing with the environment variable `ELF_DET_PROC_DIR`.
+
+Example:
+
+```bash
+ELF_DET_PROC_DIR=/tmp/fakeproc ./build/proc_elf_ctrl 12345
+```
+
+Internally, path construction is handled via helper `build_proc_path()`.
+
+Helper headers used:
+- `src/lib/user_helpers.h` – path building with env override
+- `src/lib/elf_helpers.h` – pure functions for CPU usage and BSS range
 
 ## Testing
 
@@ -243,6 +257,19 @@ The module has been tested on:
 - The code has been updated to use modern kernel APIs including VMA iterators and proc_ops
 
 **Safe Testing Options:**
+### Function-Level Unit Tests
+
+Run pure function tests (no kernel required):
+
+```bash
+make unit
+```
+
+This builds and runs:
+- `tests/elf_helpers_test.c` – verifies `compute_usage_permyriad()` and `compute_bss_range()`
+- `tests/user_helpers_test.c` – verifies `build_proc_path()` with and without `ELF_DET_PROC_DIR`
+
+Artifacts are created under `build/`.
 1. **Dev Container** (current setup) - Isolated from host kernel
 2. **QEMU VM** (recommended for extra safety) - See [scripts/README.md](scripts/README.md)
 3. **Cloud VM** - Disposable testing environment

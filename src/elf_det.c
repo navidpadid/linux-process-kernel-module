@@ -13,6 +13,7 @@
 #include <linux/string.h> //for string libs
 #include <linux/sched/signal.h> //for task iteration
 #include <linux/sched/cputime.h> //for task_cputime
+#include "lib/elf_helpers.h"
 
 MODULE_LICENSE("Dual BSD/GPL"); //module license
 
@@ -51,10 +52,7 @@ static int elfdet_show(struct seq_file *m, void *v) {
 	/* CPU usage: total CPU time of task since start divided by elapsed wall time */
 	total_ns = (u64)task->utime + (u64)task->stime;
 	delta_ns = ktime_get_ns() - task->start_time;
-	if (delta_ns > 0)
-		usage_permyriad = (10000ULL * total_ns) / delta_ns; /* percent with two decimals */
-	else
-		usage_permyriad = 0;
+	usage_permyriad = compute_usage_permyriad(total_ns, delta_ns);
         
 	// Access VMA using VMA iterator for kernel 6.8+
 	if (mmap_read_lock_killable(task->mm)) {
@@ -64,13 +62,7 @@ static int elfdet_show(struct seq_file *m, void *v) {
 
 	/* Use mm fields directly for ELF and BSS */
 	elf_header = task->mm->start_code;
-	bss_start = task->mm->end_data;
-	bss_end = task->mm->start_brk;
-	if (bss_end < bss_start) {
-		/* If values look wrong due to unusual layout, clear them */
-		bss_start = 0;
-		bss_end = 0;
-	}
+	compute_bss_range(task->mm->end_data, task->mm->start_brk, &bss_start, &bss_end);
 
 	mmap_read_unlock(task->mm);
 
