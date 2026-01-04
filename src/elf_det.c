@@ -13,7 +13,7 @@
 #include <linux/string.h> //for string libs
 #include <linux/sched/signal.h> //for task iteration
 #include <linux/sched/cputime.h> //for task_cputime
-#include "lib/elf_helpers.h"
+#include "elf_helpers.h"
 
 MODULE_LICENSE("Dual BSD/GPL"); //module license
 

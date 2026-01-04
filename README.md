@@ -49,6 +49,8 @@ kernel_module/
 │   ├── proc_elf_ctrl.c     # User-space controller program
 │   ├── elf_det_tests.c     # Unit tests for elf_det functions
 │   ├── proc_elf_ctrl_tests.c  # Unit tests for proc_elf_ctrl helpers
+│   ├── elf_helpers.h       # Helper functions for CPU usage and BSS range
+│   ├── user_helpers.h      # Helper functions for path building
 │   └── Kbuild              # Kernel build configuration
 ├── Makefile                # Build system
 ├── .gitignore              # Git ignore rules
@@ -233,8 +235,8 @@ ELF_DET_PROC_DIR=/tmp/fakeproc ./build/proc_elf_ctrl 12345
 Internally, path construction is handled via helper `build_proc_path()`.
 
 Helper headers used:
-- `src/lib/user_helpers.h` – path building with env override
-- `src/lib/elf_helpers.h` – pure functions for CPU usage and BSS range
+- `src/user_helpers.h` – path building with env override
+- `src/elf_helpers.h` – pure functions for CPU usage and BSS range
 
 ## Testing
 

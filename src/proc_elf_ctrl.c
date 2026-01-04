@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include "lib/user_helpers.h"
+#include "user_helpers.h"
 
 int main(int argc, char **argv)
 {

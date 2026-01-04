@@ -1,4 +1,4 @@
-#include "../src/lib/elf_helpers.h"
+#include "elf_helpers.h"
 #include <assert.h>
 #include <stdio.h>
 

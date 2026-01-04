@@ -1,4 +1,4 @@
-#include "../src/lib/user_helpers.h"
+#include "user_helpers.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
