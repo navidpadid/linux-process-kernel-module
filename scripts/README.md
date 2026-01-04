@@ -1,12 +1,17 @@
-# QEMU Testing Scripts
+# Testing Scripts
 
-Scripts for safely testing the Linux Process Information Kernel Module in an isolated QEMU virtual machine.
+Scripts for testing the Linux Process Information Kernel Module in isolated QEMU virtual machines.
 
 ## Overview
 
-These scripts provide a complete QEMU-based testing environment that isolates kernel module testing from your host system. This is the recommended approach for testing kernel modules as it prevents potential system crashes or instability from affecting your development machine.
+This directory contains scripts for:
+- **QEMU Testing**: Safely test kernel modules in isolated virtual machines
+
+**Note**: All development should be done in the dev container, which includes pre-configured static analysis tools and Git hooks.
 
 ## Quick Start
+
+### QEMU Testing
 
 ```bash
 # 1. Setup QEMU environment (one-time setup)
@@ -21,7 +26,9 @@ These scripts provide a complete QEMU-based testing environment that isolates ke
 
 ## Script Descriptions
 
-### `qemu-setup.sh`
+### QEMU Testing Scripts
+
+#### `qemu-setup.sh`
 - Downloads Ubuntu 24.04 cloud image
 - Creates cloud-init configuration
 - Sets up VM with kernel headers pre-installed
@@ -32,7 +39,7 @@ These scripts provide a complete QEMU-based testing environment that isolates ke
 - `qemu-img`
 - `cloud-localds` (from cloud-image-utils package)
 
-### `qemu-run.sh`
+#### `qemu-run.sh`
 - Starts the QEMU VM with appropriate settings
 - Forwards SSH port 2222 to VM's port 22
 - Allocates 2GB RAM and 2 CPU cores
@@ -43,7 +50,7 @@ These scripts provide a complete QEMU-based testing environment that isolates ke
 - Password: `ubuntu`
 - Exit QEMU: Press `Ctrl+A` then `X`
 
-### `qemu-test.sh`
+#### `qemu-test.sh`
 - Automated end-to-end testing script (run from host)
 - Builds kernel module and user program locally
 - Copies files to VM via SCP
@@ -55,10 +62,58 @@ These scripts provide a complete QEMU-based testing environment that isolates ke
 - VM must be running (`qemu-run.sh`)
 - SSH must be accessible on port 2222
 
-### `quick-reference.sh`
+#### `quick-reference.sh`
 - Quick reference guide for common QEMU commands
 - Display usage: `./scripts/quick-reference.sh`
 - Includes setup, testing, and troubleshooting commands
+
+### Static Analysis
+
+**Note**: All tools and hooks are automatically installed and configured in the dev container.
+
+#### `pre-commit.sh`
+- Git pre-commit hook script (automatically installed in dev container)
+- Runs formatting, cppcheck, and checkpatch on staged files
+- Can be bypassed with `git commit --no-verify` if needed
+
+**Checks Performed:**
+- Code formatting compliance (clang-format)
+- Cppcheck static analysis
+- Kernel coding style (checkpatch)
+
+## Code Quality Workflow
+
+All tools are pre-configured in the dev container:
+
+```bash
+make format  # Format code
+make check   # Run all checks
+git commit   # Hooks run automatically
+```
+
+### During Development
+```bash
+# Format code before committing
+make format
+
+# Run all static analysis checks
+make check
+
+# Individual checks
+make checkpatch  # Kernel coding style
+make sparse      # Kernel static analysis
+make cppcheck    # General C/C++ analysis
+```
+
+### Pre-Commit
+If Git hooks are installed, checks run automatically:
+```bash
+git commit -m "Your commit message"
+# Hooks run automatically and will fail commit if issues found
+
+# To skip hooks (use sparingly)
+git commit --no-verify -m "Your commit message"
+```
 
 ## Manual Testing
 

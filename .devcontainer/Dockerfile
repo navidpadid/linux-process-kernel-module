@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y \
     bc \
     libelf-dev \
     libssl-dev \
+    clang-format \
+    sparse \
+    cppcheck \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure ubuntu user exists and has sudo privileges

@@ -51,3 +51,9 @@ core.*
 # QEMU testing environment
 scripts/qemu-env/
 *~
+
+# Static analysis output
+*.log
+cppcheck-build/
+scan-build-*/
+compile_commands.json

@@ -34,16 +34,17 @@ The project consists of two main components:
 ```
 kernel_module/
 ├── .devcontainer/          # Development container configuration
-│   ├── Dockerfile          # Container setup for kernel development
-│   └── devcontainer.json   # VS Code dev container settings
+│   ├── Dockerfile          # Pre-installs: clang-format, sparse, cppcheck
+│   └── devcontainer.json   # Auto-configures Git hooks on startup
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # GitHub Actions CI/CD pipeline
+│       └── ci.yml          # GitHub Actions CI/CD with static analysis
 ├── scripts/                # Testing and utility scripts
 │   ├── qemu-setup.sh       # Setup QEMU testing environment
 │   ├── qemu-run.sh         # Run QEMU VM
 │   ├── qemu-test.sh        # Automated module testing in QEMU
-│   └── README.md           # QEMU testing documentation
+│   ├── pre-commit.sh       # Pre-commit hook script (auto-installed in container)
+│   └── README.md           # Scripts documentation
 ├── src/
 │   ├── elf_det.c           # Kernel module source code
 │   ├── proc_elf_ctrl.c     # User-space controller program
@@ -52,7 +53,10 @@ kernel_module/
 │   ├── elf_helpers.h       # Helper functions for CPU usage and BSS range
 │   ├── user_helpers.h      # Helper functions for path building
 │   └── Kbuild              # Kernel build configuration
-├── Makefile                # Build system
+├── .clang-format           # Code formatting configuration
+├── .cppcheck-suppressions  # Static analysis suppressions
+├── .editorconfig           # Editor configuration
+├── Makefile                # Build system with static analysis targets
 ├── .gitignore              # Git ignore rules
 └── README.md               # This file
 
@@ -66,42 +70,28 @@ Generated after build:
 
 ## Prerequisites
 
-### For Local Development
+This project uses a **Dev Container** for development to ensure a consistent, fully-configured environment.
 
-- **Linux Operating System** (Ubuntu 20.04+ recommended)
-- **Kernel Headers** for your running kernel (Kernel 5.6+ required, 6.8+ recommended)
-- **Build Tools**: gcc, make
-- **Root Privileges** for module installation
-
-### For Dev Container Development
-
+**Required:**
 - **Docker** installed and running
 - **VS Code** with Remote - Containers extension
-- **Internet connection** for initial setup
+- **Internet connection** for initial container build
+
+**Included in container:**
+- ✅ Ubuntu 24.04 with Kernel 6.8+ headers
+- ✅ All build tools (gcc, make, kernel headers)
+- ✅ Static analysis tools (clang-format, sparse, cppcheck) pre-installed
+- ✅ Git pre-commit hooks automatically configured
+- ✅ Zero manual configuration required
 
 ## Building and Running
 
-### Option 1: Using Dev Container (Recommended)
+### Using Dev Container
 
 1. Open the project in VS Code
 2. Click "Reopen in Container" when prompted (or use Command Palette: "Remote-Containers: Reopen in Container")
-3. Wait for the container to build and initialize
+3. Wait for the container to build and initialize (first time only)
 4. Build the project:
-
-```bash
-make all
-```
-
-### Option 2: Local Development
-
-1. **Install prerequisites**:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y build-essential linux-headers-$(uname -r) kmod
-```
-
-2. **Build the kernel module and user program**:
 
 ```bash
 make all
@@ -110,6 +100,8 @@ make all
 This will build:
 - `build/elf_det.ko` - The kernel module
 - `build/proc_elf_ctrl` - The user program
+
+All dependencies, tools, and hooks are pre-configured automatically!
 
 ## Usage
 
@@ -187,6 +179,8 @@ See [scripts/README.md](scripts/README.md) for detailed QEMU testing documentati
 
 ## Makefile Targets
 
+### Build Targets
+
 | Target | Description |
 |--------|-------------|
 | `make all` | Build both kernel module and user program (default) |
@@ -198,6 +192,17 @@ See [scripts/README.md](scripts/README.md) for detailed QEMU testing documentati
 | `make unit` | Build and run function-level unit tests (no kernel required) |
 | `make clean` | Remove all build artifacts |
 | `make help` | Display help message |
+
+### Code Quality Targets
+
+| Target | Description |
+|--------|-------------|
+| `make check` | Run all static analysis checks (checkpatch + sparse + cppcheck) |
+| `make checkpatch` | Check kernel coding style with checkpatch.pl |
+| `make sparse` | Run sparse static analyzer for kernel code |
+| `make cppcheck` | Run cppcheck static analyzer for C/C++ |
+| `make format` | Format all source files with clang-format |
+| `make format-check` | Check if code is properly formatted (CI-friendly) |
 
 ## Technical Details
 
@@ -238,6 +243,98 @@ Helper headers used:
 - `src/user_helpers.h` – path building with env override
 - `src/elf_helpers.h` – pure functions for CPU usage and BSS range
 
+## Code Quality and Static Analysis
+
+This project includes comprehensive static analysis and code formatting tools to ensure high code quality and compliance with Linux kernel coding standards.
+
+### Installing Analysis Tools
+
+Run the installation script to install all required tools:
+
+```bash
+./scripts/install-analysis-tools.sh
+```
+
+This installs:
+- **clang-format**: Code formatting according to kernel style
+- **sparse**: Semantic parser for C, designed for kernel code
+- **cppcheck**: General C/C++ static analysis
+- **checkpatch.pl**: Official kernel coding style checker (requires kernel sources)
+
+### Running Static Analysis
+
+Run all checks at once:
+
+```bash
+make check
+```
+
+Or run individual checks:
+
+```bash
+# Check kernel coding style
+make checkpatch
+
+# Run sparse static analyzer
+make sparse
+
+# Run cppcheck analyzer
+make cppcheck
+```
+
+### Code Formatting
+
+Format all source files automatically:
+
+```bash
+make format
+```
+
+Check if code is properly formatted (useful for CI/CD):
+
+```bash
+make format-check
+```
+
+### Configuration Files
+
+- `.clang-format` - clang-format configuration (Linux kernel style)
+- `.cppcheck-suppressions` - Suppression list for false positives
+- `.editorconfig` - Editor configuration for consistent coding style
+
+### Static Analysis Tools
+
+#### checkpatch.pl
+Official Linux kernel coding style checker. Enforces kernel coding standards including:
+- Indentation and spacing rules
+- Line length limits
+- Function declaration style
+- Comment formatting
+- Macro usage patterns
+
+#### sparse
+Semantic parser specifically designed for kernel code. Detects:
+- Type confusion errors
+- Endianness issues
+- Lock context imbalances
+- Address space mismatches
+- Null pointer dereferences
+
+#### cppcheck
+General-purpose C/C++ static analyzer. Finds:
+- Memory leaks
+- Buffer overflows
+- Uninitialized variables
+- Dead code
+- Logic errors
+
+#### clang-format
+Code formatter that ensures consistent style:
+- 8-space tabs (kernel standard)
+- 80-column limit
+- Linux brace style
+- Proper spacing and alignment
+
 ## Testing
 
 The module has been tested on:
@@ -271,11 +368,160 @@ Artifacts are created under `build/`.
 
 ## Important Notes
 
+- **Use the dev container** for development - it provides a consistent, fully-configured environment
 - **Root privileges** are required to load/unload kernel modules
-- Only works on **Linux** systems with kernel headers installed (Kernel 5.6+)
-- **Kernel 6.8+** uses VMA iterators - older kernels may need code modifications
+- The container includes **Ubuntu 24.04 with Kernel 6.8+** (VMA iterator API support)
 - Accessing invalid PIDs may cause undefined behavior
 - Always unload the module before rebuilding
+- **Static analysis tools** and **Git hooks** are automatically configured on container startup
+
+## Static Analysis and Code Quality
+
+This project includes comprehensive static analysis and code formatting tools to ensure high code quality and compliance with Linux kernel coding standards.
+
+**All tools and hooks are automatically installed and configured in the dev container.** No manual setup required!
+
+### Tools Integrated
+
+The following tools are included:
+
+#### 1. clang-format
+**Purpose**: Automatic code formatting  
+**Standard**: Linux kernel coding style  
+**Configuration**: `.clang-format`
+
+**Features**:
+- 8-space tabs (kernel standard)
+- 80-column line limit
+- Linux brace style
+- Consistent spacing and alignment
+
+**Usage**:
+```bash
+make format          # Format all files
+make format-check    # Check formatting (CI-friendly)
+```
+
+#### 2. checkpatch.pl
+**Purpose**: Kernel coding style compliance  
+**Source**: Official Linux kernel scripts  
+
+**Checks**:
+- Indentation and spacing rules
+- Line length limits (80 columns preferred)
+- Function declaration style
+- Comment formatting (/* */ style)
+- Macro usage patterns
+- Variable naming conventions
+
+**Usage**:
+```bash
+make checkpatch
+```
+
+#### 3. sparse
+**Purpose**: Semantic analysis for C code  
+**Specialty**: Kernel-specific checks  
+
+**Detects**:
+- Type confusion errors
+- Endianness issues (`__be32`, `__le32`)
+- Lock context imbalances
+- Address space mismatches (`__user`, `__kernel`)
+- Null pointer dereferences
+
+**Usage**:
+```bash
+make sparse
+```
+
+#### 4. cppcheck
+**Purpose**: General C/C++ static analysis  
+**Configuration**: `.cppcheck-suppressions`
+
+**Detects**:
+- Memory leaks
+- Buffer overflows
+- Uninitialized variables
+- Dead code
+- Logic errors
+
+**Usage**:
+```bash
+make cppcheck
+```
+
+### Running Static Analysis
+
+Run all checks at once:
+```bash
+make check
+```
+
+Or run individual checks:
+```bash
+make checkpatch  # Kernel coding style
+make sparse      # Kernel static analysis
+make cppcheck    # General C/C++ analysis
+make format      # Format all code
+```
+
+### Configuration Files
+
+- **`.clang-format`** - Code formatting rules (Linux kernel style)
+- **`.cppcheck-suppressions`** - Suppression list for false positives
+- **`.editorconfig`** - Editor configuration for consistent coding style
+
+### Git Hooks
+
+Pre-commit hooks are automatically installed on container startup.
+
+The pre-commit hook runs:
+- Code formatting checks
+- Cppcheck static analysis
+- Checkpatch coding style validation
+
+To bypass hooks (use sparingly):
+```bash
+git commit --no-verify -m "message"
+```
+
+### Best Practices
+
+**Follow Linux Kernel Coding Style:**
+- Use tabs (8 spaces), not spaces for indentation
+- 80 column limit for code
+- Opening brace on same line (except functions)
+- Space after keywords: `if (`, `while (`, `for (`
+- No space after function names: `function(arg)`
+- Use C89-style comments: `/* comment */`
+
+**Example:**
+```c
+int example_function(int param)
+{
+	if (param > 0) {
+		/* Comment style: C89 */
+		return param * 2;
+	}
+	return 0;
+}
+```
+
+**Development Workflow:**
+
+```bash
+# Everything is ready - just start coding!
+
+# Format code before committing
+make format
+
+# Run all checks
+make check
+
+# Commit (hooks run automatically)
+git commit -m "Your message"
+```
 
 ## Troubleshooting
 
@@ -323,6 +569,13 @@ This project is licensed under **Dual BSD/GPL** license.
 Contributions, issues, and feature requests are welcome!
 
 ## Changelog
+
+### Version 1.1
+- Integrated static analysis tools (clang-format, sparse, cppcheck, checkpatch)
+- Automated Git pre-commit hooks for code quality
+- Dev container with zero-configuration setup
+- Enhanced CI/CD pipeline with static analysis checks
+- Comprehensive code quality documentation
 
 ### Version 1.0
 - Initial release with basic process information extraction
