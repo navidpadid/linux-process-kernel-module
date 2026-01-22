@@ -171,29 +171,6 @@ Contributions welcome! The project includes:
 - Static analysis and formatting tools
 - GitHub Actions CI/CD
 
-## Changelog
-
-### Version 1.3 (Current)
-- Added `STACK_END` and `ELF_BASE` extraction
-- Extracted stack finding logic with unit tests
-- Improved VMA iteration with maple tree API
-- Comprehensive documentation in docs/ folder
-
-### Version 1.2
-- Added heap start/end extraction
-- Added `compute_heap_range()` helper function
-- Documented memory layout limitations
-
-### Version 1.1
-- Integrated static analysis tools
-- Dev container with zero-configuration setup
-- Enhanced CI/CD pipeline
-
-### Version 1.0
-- Initial release
-- Basic process information extraction
-- QEMU testing environment
-
 ---
 
 **Educational Project**: Demonstrates Linux kernel module development. Use at your own risk.
