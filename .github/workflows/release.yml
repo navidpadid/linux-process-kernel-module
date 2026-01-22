@@ -113,21 +113,21 @@ jobs:
           # Create release notes
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # Use PR body for release notes
-            cat > /tmp/release_notes.md << EOF
-## ${{ github.event.pull_request.title }}
-
-${{ github.event.pull_request.body }}
-
----
-**Version**: $VERSION | **Type**: $BUMP_TYPE
-EOF
+            {
+              echo "## ${{ github.event.pull_request.title }}"
+              echo ""
+              echo "${{ github.event.pull_request.body }}"
+              echo ""
+              echo "---"
+              echo "**Version**: $VERSION | **Type**: $BUMP_TYPE"
+            } > /tmp/release_notes.md
           else
             # Manual workflow dispatch
-            cat > /tmp/release_notes.md << EOF
-Release $VERSION
-
-**Version bump**: $BUMP_TYPE
-EOF
+            {
+              echo "Release $VERSION"
+              echo ""
+              echo "**Version bump**: $BUMP_TYPE"
+            } > /tmp/release_notes.md
           fi
           
           cat /tmp/release_notes.md
