@@ -59,8 +59,8 @@ jobs:
       - name: Get current version
         id: current_version
         run: |
-          # Try to get the latest tag, default to 1.3.0 if no tags exist
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.3.0")
+          # Try to get the latest tag, default to 0.0.0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           # Remove 'v' prefix if present
           VERSION=${LATEST_TAG#v}
@@ -104,54 +104,33 @@ jobs:
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
 
-      - name: Extract changelog for this version
-        id: changelog
+      - name: Create release notes
+        id: release_notes
         run: |
-          # Extract relevant section from README changelog
           VERSION="${{ steps.new_version.outputs.version }}"
+          BUMP_TYPE="${{ steps.version_type.outputs.type }}"
           
-          # Create a temporary changelog file
-          cat > /tmp/release_notes.md << 'EOF'
-          ## Release ${{ steps.new_version.outputs.version }}
-          
-          ### Changes in this release
-          
-          This release includes updates and improvements to the Linux Process Information Kernel Module.
-          
-          See the [full changelog](https://github.com/${{ github.repository }}/blob/main/README.md#changelog) for details.
-          EOF
-          
-          # If there's a PR description, add it
+          # Create release notes
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "" >> /tmp/release_notes.md
-            echo "### Pull Request" >> /tmp/release_notes.md
-            echo "${{ github.event.pull_request.title }}" >> /tmp/release_notes.md
-            echo "" >> /tmp/release_notes.md
-            echo "${{ github.event.pull_request.body }}" >> /tmp/release_notes.md
+            # Use PR body for release notes
+            cat > /tmp/release_notes.md << EOF
+## ${{ github.event.pull_request.title }}
+
+${{ github.event.pull_request.body }}
+
+---
+**Version**: $VERSION | **Type**: $BUMP_TYPE
+EOF
+          else
+            # Manual workflow dispatch
+            cat > /tmp/release_notes.md << EOF
+Release $VERSION
+
+**Version bump**: $BUMP_TYPE
+EOF
           fi
           
           cat /tmp/release_notes.md
-
-      - name: Update version in README
-        run: |
-          VERSION="${{ steps.new_version.outputs.version }}"
-          DATE=$(date +"%Y-%m-%d")
-          EVENT_NAME="${{ github.event_name }}"
-          BUMP_TYPE="${{ steps.version_type.outputs.type }}"
-          
-          # Add new version to changelog in README
-          if grep -q "## Changelog" README.md; then
-            # Create the changelog entry
-            ENTRY="### Version $VERSION ($DATE)"$'\n'"- Release created from $EVENT_NAME"$'\n'"- Version bump: $BUMP_TYPE"
-            
-            # Insert new version after "## Changelog" line using awk
-            awk -v entry="$ENTRY" '/## Changelog/ {print; print ""; print entry; next} 1' README.md > README.md.tmp
-            mv README.md.tmp README.md
-            
-            echo "Updated README.md with version $VERSION"
-            git add README.md
-            git commit -m "chore: bump version to $VERSION" || echo "No changes to commit"
-          fi
 
       - name: Create and push tag
         run: |
@@ -169,8 +148,3 @@ jobs:
           body_path: /tmp/release_notes.md
           draft: false
           prerelease: false
-
-      - name: Push version update
-        if: success()
-        run: |
-          git push origin main || echo "No changes to push"
