@@ -141,12 +141,12 @@ jobs:
           
           # Add new version to changelog in README
           if grep -q "## Changelog" README.md; then
-            # Insert new version after "## Changelog" line
-            sed -i "/## Changelog/a\\
-\\
-### Version $VERSION ($DATE)\\
-- Release created from $EVENT_NAME\\
-- Version bump: $BUMP_TYPE" README.md
+            # Create the changelog entry
+            ENTRY="### Version $VERSION ($DATE)"$'\n'"- Release created from $EVENT_NAME"$'\n'"- Version bump: $BUMP_TYPE"
+            
+            # Insert new version after "## Changelog" line using awk
+            awk -v entry="$ENTRY" '/## Changelog/ {print; print ""; print entry; next} 1' README.md > README.md.tmp
+            mv README.md.tmp README.md
             
             echo "Updated README.md with version $VERSION"
             git add README.md
