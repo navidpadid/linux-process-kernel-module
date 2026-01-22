@@ -39,9 +39,12 @@ static int elfdet_show(struct seq_file *m, void *v)
 	struct task_struct *task;
 	unsigned long bss_start = 0, bss_end = 0;
 	unsigned long heap_start = 0, heap_end = 0;
-	unsigned long elf_header = 0;
+	unsigned long stack_start = 0, stack_end = 0;
+	unsigned long elf_base = 0;
 	u64 delta_ns, total_ns;
 	u64 usage_permyriad; // CPU usage in hundredths of a percent (X.XX%)
+	struct vm_area_struct *vma;
+	struct ma_state mas;
 	int ret;
 
 	ret = kstrtoint(buff, 10, &user_pid);
@@ -70,26 +73,59 @@ static int elfdet_show(struct seq_file *m, void *v)
 		return 0;
 	}
 
-	/* Use mm fields directly for ELF, BSS, and heap */
-	elf_header = task->mm->start_code;
+	/* Use mm fields directly for ELF, BSS, heap, and stack
+	 * Note: Modern ELF binaries may have end_data == start_brk (no BSS)
+	 * rodata is typically merged with code section (start_code to end_code)
+	 * Heap shown is brk-based; mmap-allocated heap is not tracked here
+	 */
+
+	/* ELF base: First VMA is typically the ELF binary base (for PIE) */
+	mas_init(&mas, &task->mm->mm_mt, 0);
+	vma = mas_find(&mas, ULONG_MAX);
+	if (vma)
+		elf_base = vma->vm_start;
+
+	/* Stack: Find the [stack] VMA for actual stack boundaries */
+	stack_start = task->mm->start_stack;
+	mas_set(&mas, 0);
+	mas_for_each(&mas, vma, ULONG_MAX)
+	{
+		if (vma->vm_start <= task->mm->start_stack &&
+		    vma->vm_end >= task->mm->start_stack) {
+			/* Found the stack VMA */
+			stack_end = vma->vm_start; /* Stack grows down */
+			break;
+		}
+	}
+
+	/* BSS: uninitialized data between end_data and start_brk
+	 * May be zero-length in modern binaries
+	 */
 	compute_bss_range(task->mm->end_data, task->mm->start_brk, &bss_start,
 			  &bss_end);
+
+	/* Heap: brk-based heap from start_brk to current brk
+	 * Note: Does not include mmap-based allocations (arena heap)
+	 */
 	compute_heap_range(task->mm->start_brk, task->mm->brk, &heap_start,
 			   &heap_end);
 
 	mmap_read_unlock(task->mm);
 
 	// now print the information we want to the det file
-	seq_puts(m, "PID \tNAME \tCPU(%) \tSTART_CODE \tEND_CODE "
-		    "\tSTART_DATA\tEND_DATA "
-		    "\tBSS_START\tBSS_END\tHEAP_START\tHEAP_END\tELF\n");
-	seq_printf(m,
-		   "%.5d\t%.7s\t%llu.%02llu\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%."
-		   "13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\n",
-		   task->pid, task->comm, (usage_permyriad / 100),
-		   (usage_permyriad % 100), task->mm->start_code,
-		   task->mm->end_code, task->mm->start_data, task->mm->end_data,
-		   bss_start, bss_end, heap_start, heap_end, elf_header);
+	seq_puts(
+	    m, "PID \tNAME \tCPU(%) \tSTART_CODE \tEND_CODE "
+	       "\tSTART_DATA\tEND_DATA \tBSS_START\tBSS_END\tHEAP_START\tHEAP_"
+	       "END\tSTACK_START\tSTACK_END\tELF_BASE\n");
+	seq_printf(
+	    m,
+	    "%.5d\t%.7s\t%llu.%02llu\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%."
+	    "13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%."
+	    "13lx\t0x%.13lx\n",
+	    task->pid, task->comm, (usage_permyriad / 100),
+	    (usage_permyriad % 100), task->mm->start_code, task->mm->end_code,
+	    task->mm->start_data, task->mm->end_data, bss_start, bss_end,
+	    heap_start, heap_end, stack_start, stack_end, elf_base);
 
 	return 0;
 }

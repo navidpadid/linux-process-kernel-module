@@ -12,9 +12,9 @@ This project implements a Linux Kernel Module that provides access to process in
 
 - **Process ID (PID)** and **Process Name**
 - **CPU Usage** statistics
-- **Memory Layout**: Code, Data, BSS, and Heap sections
+- **Memory Layout**: Code, Data, BSS, Heap, and Stack sections
 - **ELF Binary** information
-- **Start/End addresses** for code, data, BSS, and heap segments
+- **Start/End addresses** for code, data, BSS, heap, and stack segments
 
 The project consists of two main components:
 1. **Kernel Module** (`elf_det.c`) - Runs in kernel space and gathers process information
@@ -25,7 +25,8 @@ The project consists of two main components:
 - **Process Memory Inspection**: View detailed memory layout of any running process
 - **CPU Usage Tracking**: Real-time CPU usage percentage calculation
 - **ELF Section Analysis**: Extract ELF binary sections (code, data, BSS)
-- **Heap Analysis**: Track heap start and end addresses for dynamic memory allocation
+- **Heap Analysis**: Track heap start and end addresses for dynamic memory allocation (brk-based)
+- **Stack Tracking**: Monitor stack start address
 - **Proc Filesystem Interface**: Easy interaction through `/proc/elf_det/`
 - **Sequential File Operations**: Efficient data reading using kernel seq_file API
 - **User-Friendly CLI**: Simple command-line interface for querying process information
@@ -140,9 +141,11 @@ ps aux | grep <process_name>
 ************enter the process id: 1234
 
 the process info is here:
-PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        BSS_START       BSS_END         HEAP_START      HEAP_END        ELF
-01234   bash    0.50    0x0000563a1234  0x0000563a5678  0x0000563a9abc  0x0000563adef0  0x00007ffc1234  0x00007ffc5678  0x0000563b0000  0x0000563b8000  0x0000000000000040
+PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        BSS_START       BSS_END         HEAP_START      HEAP_END        STACK_START     STACK_END       ELF_BASE
+01234   bash    0.50    0x0000563a1234  0x0000563a5678  0x0000563a9abc  0x0000563adef0  0x0000563adef0  0x0000563adef0  0x0000563b0000  0x0000563b8000  0x00007ffd12345000  0x00007ffd12340000  0x0000563a1000
 ```
+
+**Note**: BSS_START and BSS_END may be equal (zero-length BSS) in modern ELF binaries. This is normal.
 
 ### 4. Uninstall the Module
 
@@ -219,11 +222,26 @@ The kernel module creates entries in `/proc/elf_det/`:
 - `procfile_read()` - Returns formatted process data
 
 **Memory Information Extracted:**
-- **Code Section**: `start_code` to `end_code` - executable code region
+- **Code Section**: `start_code` to `end_code` - executable code region (includes rodata)
 - **Data Section**: `start_data` to `end_data` - initialized data region
 - **BSS Section**: `end_data` to `start_brk` - uninitialized data region
-- **Heap Section**: `start_brk` to `brk` - dynamic memory allocation region
-- **ELF Header**: Location of the ELF binary header
+- **Heap Section**: `start_brk` to `brk` - brk-based dynamic memory allocation
+- **Stack**: `start_stack` (top/base) to `stack_end` (current lower bound)
+- **ELF Base**: Base address of the ELF binary (first VMA, typically lower than start_code for PIE)
+
+**Important Notes and Limitations:**
+
+1. **BSS May Be Zero-Length**: Modern ELF binaries often have `end_data == start_brk`, resulting in zero-length BSS. This is normal, not an error.
+
+2. **Read-Only Data (rodata)**: The read-only data segment is typically merged with the code section (`start_code` to `end_code`) in modern binaries. It's not shown separately.
+
+3. **Heap Limitation**: The heap shown is **brk-based only** (traditional heap managed by brk/sbrk syscalls). Modern allocators like glibc's malloc also use:
+   - **mmap-based allocations** for large requests (>128KB typically)
+   - **Arena heaps** (multiple heap regions)
+   - These are NOT included in the brk-based heap range shown
+   - To see full heap usage, parse `/proc/pid/maps` for anonymous `[heap]` entries and unnamed mmap regions
+
+4. **Stack**: Shows both `start_stack` (top/base) and `stack_end` (current lower boundary). The stack grows downward from start_stack. The actual current stack pointer (in CPU registers) may be anywhere between these bounds.
 
 **Kernel APIs Used:**
 - `proc_fs.h` - Proc filesystem operations
@@ -577,6 +595,22 @@ This project is licensed under **Dual BSD/GPL** license.
 Contributions, issues, and feature requests are welcome!
 
 ## Changelog
+
+### Version 1.3
+- Added `STACK_END` extraction by parsing stack VMA
+- Fixed `ELF` column to show actual ELF base address (renamed to `ELF_BASE`)
+- Clarified that ELF_BASE is the first VMA (PIE binary base)
+- Stack now shows full range (start to end)
+- Improved VMA iteration for stack boundary detection
+
+### Version 1.2.1
+- Added stack start address extraction (`STACK_START` column)
+- Improved documentation of memory layout limitations
+- Added comprehensive notes about BSS zero-length in modern binaries
+- Documented brk-based heap limitation (mmap heaps not tracked)
+- Clarified that rodata is merged with code section
+- Enhanced code comments for better understanding
+- Fixed potential confusion about "always zero" BSS
 
 ### Version 1.2
 - Added heap start and end address extraction
