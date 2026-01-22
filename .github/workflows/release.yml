@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release:
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      (github.event.pull_request.merged == true && 
+       (contains(github.event.pull_request.labels.*.name, 'release:major') ||
+        contains(github.event.pull_request.labels.*.name, 'release:minor') ||
+        contains(github.event.pull_request.labels.*.name, 'release:patch')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version bump type
+        id: version_type
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "type=${{ inputs.version_type }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'release:major') }}" == "true" ]]; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'release:minor') }}" == "true" ]]; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'release:patch') }}" == "true" ]]; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "type=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get current version
+        id: current_version
+        run: |
+          # Try to get the latest tag, default to 1.3.0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.3.0")
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          # Remove 'v' prefix if present
+          VERSION=${LATEST_TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          TYPE="${{ steps.version_type.outputs.type }}"
+          
+          # Parse current version
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          # Bump version based on type
+          case "$TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+            *)
+              echo "No valid version type found"
+              exit 1
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract relevant section from README changelog
+          VERSION="${{ steps.new_version.outputs.version }}"
+          
+          # Create a temporary changelog file
+          cat > /tmp/release_notes.md << 'EOF'
+          ## Release ${{ steps.new_version.outputs.version }}
+          
+          ### Changes in this release
+          
+          This release includes updates and improvements to the Linux Process Information Kernel Module.
+          
+          See the [full changelog](https://github.com/${{ github.repository }}/blob/main/README.md#changelog) for details.
+          EOF
+          
+          # If there's a PR description, add it
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "" >> /tmp/release_notes.md
+            echo "### Pull Request" >> /tmp/release_notes.md
+            echo "${{ github.event.pull_request.title }}" >> /tmp/release_notes.md
+            echo "" >> /tmp/release_notes.md
+            echo "${{ github.event.pull_request.body }}" >> /tmp/release_notes.md
+          fi
+          
+          cat /tmp/release_notes.md
+
+      - name: Update version in README
+        run: |
+          VERSION="${{ steps.new_version.outputs.version }}"
+          DATE=$(date +"%Y-%m-%d")
+          
+          # Add new version to changelog in README
+          if grep -q "## Changelog" README.md; then
+            # Insert new version after "## Changelog" line
+            sed -i "/## Changelog/a\\
+\\
+### Version $VERSION ($DATE)\\
+- Release created from ${{ github.event_name }}\\
+- Version bump: ${{ steps.version_type.outputs.type }}" README.md
+            
+            echo "Updated README.md with version $VERSION"
+            git add README.md
+            git commit -m "chore: bump version to $VERSION" || echo "No changes to commit"
+          fi
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ steps.new_version.outputs.tag }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.new_version.outputs.tag }}
+          release_name: Release ${{ steps.new_version.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: false
+
+      - name: Push version update
+        if: success()
+        run: |
+          git push origin main || echo "No changes to push"

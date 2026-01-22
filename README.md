@@ -147,6 +147,7 @@ See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
 - [TECHNICAL.md](docs/TECHNICAL.md) - Kernel module details, memory layout, limitations
 - [CODE_QUALITY.md](docs/CODE_QUALITY.md) - Static analysis, code formatting, best practices
 - [SCRIPTS.md](docs/SCRIPTS.md) - Detailed script documentation
+- [RELEASE.md](docs/RELEASE.md) - Version release process and guidelines
 
 ## Important Notes
 
