@@ -136,6 +136,8 @@ jobs:
         run: |
           VERSION="${{ steps.new_version.outputs.version }}"
           DATE=$(date +"%Y-%m-%d")
+          EVENT_NAME="${{ github.event_name }}"
+          BUMP_TYPE="${{ steps.version_type.outputs.type }}"
           
           # Add new version to changelog in README
           if grep -q "## Changelog" README.md; then
@@ -143,8 +145,8 @@ jobs:
             sed -i "/## Changelog/a\\
 \\
 ### Version $VERSION ($DATE)\\
-- Release created from ${{ github.event_name }}\\
-- Version bump: ${{ steps.version_type.outputs.type }}" README.md
+- Release created from $EVENT_NAME\\
+- Version bump: $BUMP_TYPE" README.md
             
             echo "Updated README.md with version $VERSION"
             git add README.md
