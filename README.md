@@ -12,9 +12,9 @@ This project implements a Linux Kernel Module that provides access to process in
 
 - **Process ID (PID)** and **Process Name**
 - **CPU Usage** statistics
-- **Memory Layout**: Code, Data, and BSS sections
+- **Memory Layout**: Code, Data, BSS, and Heap sections
 - **ELF Binary** information
-- **Start/End addresses** for code and data segments
+- **Start/End addresses** for code, data, BSS, and heap segments
 
 The project consists of two main components:
 1. **Kernel Module** (`elf_det.c`) - Runs in kernel space and gathers process information
@@ -25,6 +25,7 @@ The project consists of two main components:
 - **Process Memory Inspection**: View detailed memory layout of any running process
 - **CPU Usage Tracking**: Real-time CPU usage percentage calculation
 - **ELF Section Analysis**: Extract ELF binary sections (code, data, BSS)
+- **Heap Analysis**: Track heap start and end addresses for dynamic memory allocation
 - **Proc Filesystem Interface**: Easy interaction through `/proc/elf_det/`
 - **Sequential File Operations**: Efficient data reading using kernel seq_file API
 - **User-Friendly CLI**: Simple command-line interface for querying process information
@@ -139,8 +140,8 @@ ps aux | grep <process_name>
 ************enter the process id: 1234
 
 the process info is here:
-PID     NAME    CPU     START_CODE      END_CODE        START_DATA      END_DATA        BSS_START       BSS_END         ELF
-01234   bash    0.5     0x0000563a1234  0x0000563a5678  0x0000563a9abc  0x0000563adef0  0x00007ffc1234  0x00007ffc5678  0x0000000000000040
+PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        BSS_START       BSS_END         HEAP_START      HEAP_END        ELF
+01234   bash    0.50    0x0000563a1234  0x0000563a5678  0x0000563a9abc  0x0000563adef0  0x00007ffc1234  0x00007ffc5678  0x0000563b0000  0x0000563b8000  0x0000000000000040
 ```
 
 ### 4. Uninstall the Module
@@ -217,6 +218,13 @@ The kernel module creates entries in `/proc/elf_det/`:
 - `procfile_write()` - Handles PID input from user space
 - `procfile_read()` - Returns formatted process data
 
+**Memory Information Extracted:**
+- **Code Section**: `start_code` to `end_code` - executable code region
+- **Data Section**: `start_data` to `end_data` - initialized data region
+- **BSS Section**: `end_data` to `start_brk` - uninitialized data region
+- **Heap Section**: `start_brk` to `brk` - dynamic memory allocation region
+- **ELF Header**: Location of the ELF binary header
+
 **Kernel APIs Used:**
 - `proc_fs.h` - Proc filesystem operations
 - `seq_file.h` - Sequential file interface
@@ -241,7 +249,7 @@ Internally, path construction is handled via helper `build_proc_path()`.
 
 Helper headers used:
 - `src/user_helpers.h` – path building with env override
-- `src/elf_helpers.h` – pure functions for CPU usage and BSS range
+- `src/elf_helpers.h` – pure functions for CPU usage, BSS range, and heap range
 
 ## Code Quality and Static Analysis
 
@@ -357,7 +365,7 @@ make unit
 ```
 
 This builds and runs:
-- `src/elf_det_tests.c` – verifies `compute_usage_permyriad()` and `compute_bss_range()`
+- `src/elf_det_tests.c` – verifies `compute_usage_permyriad()`, `compute_bss_range()`, and `compute_heap_range()`
 - `src/proc_elf_ctrl_tests.c` – verifies `build_proc_path()` with and without `ELF_DET_PROC_DIR`
 
 Artifacts are created under `build/`.
@@ -569,6 +577,14 @@ This project is licensed under **Dual BSD/GPL** license.
 Contributions, issues, and feature requests are welcome!
 
 ## Changelog
+
+### Version 1.2
+- Added heap start and end address extraction
+- Enhanced memory layout analysis with heap region tracking
+- Added `compute_heap_range()` helper function
+- Updated unit tests to cover heap range computation
+- Improved documentation with comprehensive heap information
+- Updated output format to include HEAP_START and HEAP_END columns
 
 ### Version 1.1
 - Integrated static analysis tools (clang-format, sparse, cppcheck, checkpatch)

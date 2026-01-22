@@ -32,3 +32,18 @@ static inline int compute_bss_range(unsigned long end_data,
 	*out_end = start_brk;
 	return 1;
 }
+
+/* Compute heap range from start_brk and brk; returns 0 on invalid */
+static inline int compute_heap_range(unsigned long start_brk, unsigned long brk,
+				     unsigned long *out_start,
+				     unsigned long *out_end)
+{
+	if (brk < start_brk) {
+		*out_start = 0;
+		*out_end = 0;
+		return 0;
+	}
+	*out_start = start_brk;
+	*out_end = brk;
+	return 1;
+}

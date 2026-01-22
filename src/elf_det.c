@@ -38,6 +38,7 @@ static int elfdet_show(struct seq_file *m, void *v)
 {
 	struct task_struct *task;
 	unsigned long bss_start = 0, bss_end = 0;
+	unsigned long heap_start = 0, heap_end = 0;
 	unsigned long elf_header = 0;
 	u64 delta_ns, total_ns;
 	u64 usage_permyriad; // CPU usage in hundredths of a percent (X.XX%)
@@ -69,23 +70,26 @@ static int elfdet_show(struct seq_file *m, void *v)
 		return 0;
 	}
 
-	/* Use mm fields directly for ELF and BSS */
+	/* Use mm fields directly for ELF, BSS, and heap */
 	elf_header = task->mm->start_code;
 	compute_bss_range(task->mm->end_data, task->mm->start_brk, &bss_start,
 			  &bss_end);
+	compute_heap_range(task->mm->start_brk, task->mm->brk, &heap_start,
+			   &heap_end);
 
 	mmap_read_unlock(task->mm);
 
 	// now print the information we want to the det file
 	seq_puts(m, "PID \tNAME \tCPU(%) \tSTART_CODE \tEND_CODE "
-		    "\tSTART_DATA\tEND_DATA \tBSS_START\tBSS_END\tELF\n");
+		    "\tSTART_DATA\tEND_DATA "
+		    "\tBSS_START\tBSS_END\tHEAP_START\tHEAP_END\tELF\n");
 	seq_printf(m,
 		   "%.5d\t%.7s\t%llu.%02llu\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%."
-		   "13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\n",
+		   "13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\n",
 		   task->pid, task->comm, (usage_permyriad / 100),
 		   (usage_permyriad % 100), task->mm->start_code,
 		   task->mm->end_code, task->mm->start_data, task->mm->end_data,
-		   bss_start, bss_end, elf_header);
+		   bss_start, bss_end, heap_start, heap_end, elf_header);
 
 	return 0;
 }

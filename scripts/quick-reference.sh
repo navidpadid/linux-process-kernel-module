@@ -107,9 +107,25 @@ PROJECT STRUCTURE
   src/proc_elf_ctrl.c         - User program source
   src/elf_det_tests.c         - Unit tests for elf_det
   src/proc_elf_ctrl_tests.c   - Unit tests for proc_elf_ctrl
-  src/elf_helpers.h           - Helper functions (CPU, BSS)
+  src/elf_helpers.h           - Helper functions (CPU, BSS, heap)
   src/user_helpers.h          - Helper functions (path building)
   build/                      - Compiled artifacts
+
+
+MEMORY INFORMATION EXTRACTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PID          - Process ID
+  NAME         - Process name
+  CPU(%)       - CPU usage percentage
+  START_CODE   - Start of executable code section
+  END_CODE     - End of executable code section
+  START_DATA   - Start of initialized data section
+  END_DATA     - End of initialized data section
+  BSS_START    - Start of uninitialized data section
+  BSS_END      - End of uninitialized data section
+  HEAP_START   - Start of heap (dynamic memory)
+  HEAP_END     - Current end of heap (brk)
+  ELF          - ELF header location
 
 
 TIPS
