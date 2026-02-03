@@ -50,14 +50,6 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	printf("***************************************************************"
-	       "********\n");
-	printf("******Navid user program for gathering memory info on desired "
-	       "process******\n");
-	printf("***************************************************************"
-	       "********\n");
-	printf("***************************************************************"
-	       "********\n");
 	while (1) {
 		char *pid_path2;
 		char *det_path2;
