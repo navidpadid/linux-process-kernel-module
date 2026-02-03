@@ -5,10 +5,12 @@
 The kernel module creates entries in `/proc/elf_det/`:
 - `/proc/elf_det/pid` - Write-only file to specify target PID
 - `/proc/elf_det/det` - Read-only file to retrieve process information
+- `/proc/elf_det/threads` - Read-only file to retrieve thread information
 
 ### Key Functions
 
 - `elfdet_show()` - Main function to gather and format process information
+- `elfdet_threads_show()` - Gathers thread information for all threads in a process
 - `find_stack_vma_end()` - Finds stack VMA lower boundary by iterating VMAs
 - `procfile_write()` - Handles PID input from user space
 - `procfile_read()` - Returns formatted process data
@@ -58,13 +60,13 @@ Simple C program that supports two modes:
 ```bash
 ./build/proc_elf_ctrl
 ```
-Prompts for a PID, writes to `/proc/elf_det/pid`, then reads `/proc/elf_det/det` and prints output.
+Prompts for a PID, writes to `/proc/elf_det/pid`, then reads `/proc/elf_det/det` and `/proc/elf_det/threads` and prints output.
 
 ### Argument Mode
 ```bash
 ./build/proc_elf_ctrl <PID>
 ```
-Non-interactive mode - write PID and print exactly two lines.
+Non-interactive mode - write PID and print both process and thread information.
 
 ### Environment Override
 
@@ -93,6 +95,7 @@ Path building with environment override:
 
 ## Output Format
 
+### Process Information (`/proc/elf_det/det`)
 ```
 PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        
 BSS_START       BSS_END         HEAP_START      HEAP_END        STACK_START     
@@ -105,5 +108,36 @@ Example:
 0x0000563adef0  0x0000563adef0  0x0000563adef0  0x0000563b0000  
 0x0000563b8000  0x00007ffd12345000  0x00007ffd12340000  0x0000563a1000
 ```
+
+### Thread Information (`/proc/elf_det/threads`)
+```
+TID     NAME    CPU(%)  STATE   PRIORITY        NICE    CPU_AFF
+```
+
+Example:
+```
+01234   bash    0.50    S       0       0       0,1,2,3
+01235   worker  0.01    R       0       0       0,1
+
+Total threads: 2
+```
+
+#### Thread State Codes
+- **R** - Running or runnable (on run queue)
+- **S** - Interruptible sleep (waiting for an event)
+- **D** - Uninterruptible sleep (usually I/O)
+- **T** - Stopped (by job control signal)
+- **t** - Tracing stop (by debugger)
+- **Z** - Zombie (terminated but not reaped)
+- **X** - Dead (should never be seen)
+
+#### Thread Fields
+- **TID** - Thread ID (same as PID for main thread)
+- **NAME** - Thread name (typically same as process name)
+- **CPU(%)** - Per-thread CPU usage since thread start
+- **STATE** - Current thread state (see codes above)
+- **PRIORITY** - Shown as nice value (-20 to 19, lower = higher priority)
+- **NICE** - Nice value for the thread
+- **CPU_AFF** - CPU affinity mask (which CPUs thread can run on)
 
 **Note**: BSS_START and BSS_END may be equal (zero-length BSS) in modern ELF binaries. This is normal.

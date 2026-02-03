@@ -9,7 +9,8 @@
 ## Features
 
 - **Process Memory Layout**: Code, Data, BSS, Heap, and Stack addresses
-- **CPU Usage Tracking**: Real-time CPU percentage calculation
+- **Thread Information**: List all threads with TID, state, CPU usage, priority, and CPU affinity
+- **CPU Usage Tracking**: Real-time CPU percentage calculation per process and thread
 - **ELF Section Analysis**: Binary base address and section boundaries
 - **Proc Interface**: Easy access through `/proc/elf_det/`
 - **Comprehensive Testing**: Unit tests and QEMU-based E2E testing
@@ -60,14 +61,41 @@ ps aux | grep <process_name>
 ### 3. Example Output
 
 ```
-************enter the process id: 1234
+>> Enter process ID (or Ctrl+C to exit): 1234
 
-the process info is here:
-PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        BSS_START       BSS_END         HEAP_START      HEAP_END        STACK_START     STACK_END       ELF_BASE
-01234   bash    0.50    0x0000563a1234  0x0000563a5678  0x0000563a9abc  0x0000563adef0  0x0000563adef0  0x0000563adef0  0x0000563b0000  0x0000563b8000  0x00007ffd12345000  0x00007ffd12340000  0x0000563a1000
+================================================================================
+                          PROCESS INFORMATION                                   
+================================================================================
+Process ID:      1234
+Name:            bash
+CPU Usage:       0.50%
+
+Memory Layout:
+--------------------------------------------------------------------------------
+  Code Section:    0x0000563a00001234 - 0x0000563a00005678
+  Data Section:    0x0000563a00009abc - 0x0000563a0000def0
+  BSS Section:     0x0000563a0000def0 - 0x0000563a0000def0
+  Heap:            0x0000563b00000000 - 0x0000563b00008000
+  Stack:           0x00007ffd12345000 - 0x00007ffd12340000
+  ELF Base:        0x0000563a00001000
+
+================================================================================
+                          THREAD INFORMATION                                    
+================================================================================
+TID    NAME      CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY
+-----  --------  -------  -----  --------  ----  ----------------
+01234  bash         0.50   S         0         0  0,1,2,3
+01235  worker       0.01   R         0         0  0,1
+--------------------------------------------------------------------------------
+Total threads: 2
+================================================================================
 ```
 
-**Note**: BSS_START and BSS_END may be equal (zero-length BSS) in modern ELF binaries. This is normal.
+**Notes**: 
+- BSS_START and BSS_END may be equal (zero-length BSS) in modern ELF binaries. This is normal.
+- Thread STATE: R=Running, S=Sleeping, D=Uninterruptible, T=Stopped, t=Traced, Z=Zombie, X=Dead
+- PRIORITY: Shown as nice value (-20 to 19, where lower is higher priority)
+- CPU_AFFINITY: Shows which CPUs the thread can run on
 
 ### 4. Uninstall the Module
 

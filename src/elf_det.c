@@ -24,7 +24,8 @@ static int user_pid; // the desired pid that we get from user
 static int number_opens; // number of opens(writes) to the pid file
 
 // skip these instances (will be described bellow)
-static struct proc_dir_entry *elfdet_dir, *elfdet_det_entry, *elfdet_pid_entry;
+static struct proc_dir_entry *elfdet_dir, *elfdet_det_entry, *elfdet_pid_entry,
+    *elfdet_threads_entry;
 
 static int procfile_open(struct inode *inode, struct file *file);
 static ssize_t procfile_read(struct file *, char __user *, size_t, loff_t *);
@@ -130,19 +131,127 @@ static int elfdet_show(struct seq_file *m, void *v)
 	mmap_read_unlock(task->mm);
 
 	// now print the information we want to the det file
+	seq_printf(m, "Process ID:      %d\n", task->pid);
+	seq_printf(m, "Name:            %s\n", task->comm);
+	seq_printf(m, "CPU Usage:       %llu.%02llu%%\n",
+		   (usage_permyriad / 100), (usage_permyriad % 100));
+	seq_puts(m, "\nMemory Layout:\n");
+	seq_puts(m, "----------------------------------------------------------"
+		    "----------------------\n");
+	seq_printf(m, "  Code Section:    0x%016lx - 0x%016lx\n",
+		   task->mm->start_code, task->mm->end_code);
+	seq_printf(m, "  Data Section:    0x%016lx - 0x%016lx\n",
+		   task->mm->start_data, task->mm->end_data);
+	seq_printf(m, "  BSS Section:     0x%016lx - 0x%016lx\n", bss_start,
+		   bss_end);
+	seq_printf(m, "  Heap:            0x%016lx - 0x%016lx\n", heap_start,
+		   heap_end);
+	seq_printf(m, "  Stack:           0x%016lx - 0x%016lx\n", stack_start,
+		   stack_end);
+	seq_printf(m, "  ELF Base:        0x%016lx\n", elf_base);
+
+	return 0;
+}
+
+// this function gathers thread information from kernel
+static int elfdet_threads_show(struct seq_file *m, void *v)
+{
+	struct task_struct *task, *thread;
+	int ret, thread_count = 0;
+	u64 total_ns, delta_ns, usage_permyriad;
+
+	ret = kstrtoint(buff, 10, &user_pid);
+	if (ret != 0) {
+		seq_puts(m, "Failed to parse PID\n");
+		return 0;
+	}
+
+	task = pid_task(find_vpid(user_pid), PIDTYPE_PID);
+
+	if (!task) {
+		seq_puts(m, "Invalid PID\n");
+		return 0;
+	}
+
+	// Print header
 	seq_puts(
-	    m, "PID \tNAME \tCPU(%) \tSTART_CODE \tEND_CODE "
-	       "\tSTART_DATA\tEND_DATA \tBSS_START\tBSS_END\tHEAP_START\tHEAP_"
-	       "END\tSTACK_START\tSTACK_END\tELF_BASE\n");
-	seq_printf(
 	    m,
-	    "%.5d\t%.7s\t%llu.%02llu\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%."
-	    "13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%.13lx\t0x%."
-	    "13lx\t0x%.13lx\n",
-	    task->pid, task->comm, (usage_permyriad / 100),
-	    (usage_permyriad % 100), task->mm->start_code, task->mm->end_code,
-	    task->mm->start_data, task->mm->end_data, bss_start, bss_end,
-	    heap_start, heap_end, stack_start, stack_end, elf_base);
+	    "TID    NAME      CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY\n");
+	seq_puts(m, "-----  --------  -------  -----  --------  ----  "
+		    "----------------\n");
+
+	// Iterate through all threads in the thread group
+	rcu_read_lock();
+	for_each_thread(task, thread)
+	{
+		char state_char;
+		char cpu_affinity[32];
+		int i, aff_len = 0;
+
+		thread_count++;
+
+		/* Get thread state */
+		switch (READ_ONCE(thread->__state)) {
+		case TASK_RUNNING:
+			state_char = 'R';
+			break;
+		case TASK_INTERRUPTIBLE:
+			state_char = 'S';
+			break;
+		case TASK_UNINTERRUPTIBLE:
+			state_char = 'D';
+			break;
+		case __TASK_STOPPED:
+			state_char = 'T';
+			break;
+		case __TASK_TRACED:
+			state_char = 't';
+			break;
+		case EXIT_DEAD:
+			state_char = 'X';
+			break;
+		case EXIT_ZOMBIE:
+			state_char = 'Z';
+			break;
+		default:
+			state_char = '?';
+			break;
+		}
+
+		/* CPU usage for this thread */
+		total_ns = (u64)thread->utime + (u64)thread->stime;
+		delta_ns = ktime_get_ns() - thread->start_time;
+		usage_permyriad = compute_usage_permyriad(total_ns, delta_ns);
+
+		/* Build CPU affinity mask string (show first 8 CPUs) */
+		for (i = 0; i < 8 && i < nr_cpu_ids; i++) {
+			if (cpumask_test_cpu(i, &thread->cpus_mask)) {
+				if (aff_len < sizeof(cpu_affinity) - 2)
+					aff_len += snprintf(
+					    cpu_affinity + aff_len,
+					    sizeof(cpu_affinity) - aff_len,
+					    "%d,", i);
+			}
+		}
+		if (aff_len > 0)
+			cpu_affinity[aff_len - 1] =
+			    '\0'; // Remove trailing comma
+		else
+			snprintf(cpu_affinity, sizeof(cpu_affinity), "none");
+
+		seq_printf(
+		    m,
+		    "%-5d  %-8.8s  %4llu.%02llu   %c      %4d      %4d  %s\n",
+		    thread->pid, thread->comm, (usage_permyriad / 100),
+		    (usage_permyriad % 100), state_char,
+		    thread->prio - 120, /* Convert to nice value */
+		    task_nice(thread), cpu_affinity);
+	}
+	rcu_read_unlock();
+
+	seq_puts(m, "----------------------------------------------------------"
+		    "----------------------\n");
+	seq_printf(m, "Total threads: %d\n", thread_count);
 
 	return 0;
 }
@@ -153,9 +262,23 @@ static int elfdet_open(struct inode *inode, struct file *file)
 	return single_open(file, elfdet_show, NULL); // calling elfdet_show
 }
 
+// runs when opening threads file
+static int elfdet_threads_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, elfdet_threads_show, NULL);
+}
+
 // file operations of det proc (using proc_ops for kernel 5.6+)
 static const struct proc_ops elfdet_det_ops = {
     .proc_open = elfdet_open,
+    .proc_read = seq_read,
+    .proc_lseek = seq_lseek,
+    .proc_release = single_release,
+};
+
+// file operations of threads proc
+static const struct proc_ops elfdet_threads_ops = {
+    .proc_open = elfdet_threads_open,
     .proc_read = seq_read,
     .proc_lseek = seq_lseek,
     .proc_release = single_release,
@@ -242,7 +365,12 @@ static int elfdet_init(void)
 	// create proc file pid with write_pops
 	pr_info("pid initiated; /proc/elf_det/pid created\n");
 
-	if (!elfdet_det_entry)
+	elfdet_threads_entry =
+	    proc_create("threads", 0644, elfdet_dir, &elfdet_threads_ops);
+	// create proc file threads with elfdet_threads_ops
+	pr_info("threads initiated; /proc/elf_det/threads created\n");
+
+	if (!elfdet_det_entry || !elfdet_threads_entry)
 		return -ENOMEM;
 
 	return 0;
@@ -255,6 +383,8 @@ static void elfdet_exit(void)
 	pr_info("elf_det exited; /proc/elf_det/det deleted\n");
 	proc_remove(elfdet_pid_entry);
 	pr_info("elf_det exited; /proc/elf_det/pid deleted\n");
+	proc_remove(elfdet_threads_entry);
+	pr_info("elf_det exited; /proc/elf_det/threads deleted\n");
 	proc_remove(elfdet_dir);
 }
 
