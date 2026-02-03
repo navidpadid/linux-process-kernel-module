@@ -3,8 +3,9 @@
 # Kernel module name
 obj-m := elf_det.o
 
-# Kernel build directory
-KDIR := /lib/modules/$(shell uname -r)/build
+# Kernel build directory (allow override via env: KDIR=/path make)
+KDIR ?= $(firstword $(wildcard /lib/modules/*/build))
+KDIR ?= /lib/modules/$(shell uname -r)/build
 
 # Current directory
 PWD := $(shell pwd)

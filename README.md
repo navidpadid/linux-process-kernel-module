@@ -60,10 +60,6 @@ ps aux | grep <process_name>
 ### 3. Example Output
 
 ```
-***************************************************************************
-******Navid user program for gathering memory info on desired process******
-***************************************************************************
-***************************************************************************
 ************enter the process id: 1234
 
 the process info is here:
@@ -96,19 +92,6 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine t
 ./scripts/qemu-test.sh
 ```
 
-
-## Example Output
-
-```
-PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        
-BSS_START       BSS_END         HEAP_START      HEAP_END        STACK_START     
-STACK_END       ELF_BASE
-01234   bash    0.50    0x563a1234      0x563a5678      0x563a9abc      0x563adef0      
-0x563adef0      0x563adef0      0x563b0000      0x563b8000      0x7ffd12345000  
-0x7ffd12340000  0x563a1000
-```
-
-**Note**: BSS_START and BSS_END may be equal (zero-length) in modern binaries - this is normal.
 
 ## Makefile Targets
 
@@ -148,14 +131,6 @@ See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
 - [CODE_QUALITY.md](docs/CODE_QUALITY.md) - Static analysis, code formatting, best practices
 - [SCRIPTS.md](docs/SCRIPTS.md) - Detailed script documentation
 - [RELEASE.md](docs/RELEASE.md) - Version release process and guidelines
-
-## Important Notes
-
-- **Dev container recommended**: Provides fully configured environment
-- **Root required**: Loading/unloading kernel modules needs sudo
-- **QEMU testing**: Safest way to test - isolates from host kernel
-- **BSS often zero**: Modern binaries frequently have zero-length BSS
-- **Heap limitation**: Only tracks brk-based heap, not mmap allocations
 
 ## License
 
