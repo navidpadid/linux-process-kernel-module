@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
-#include "elf_helpers.h"
+#include "elf_det.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>

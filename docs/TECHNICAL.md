@@ -80,8 +80,8 @@ Internally, path construction is handled via `build_proc_path()`.
 
 ## Helper Libraries
 
-### `src/elf_helpers.h`
-Pure functions for CPU usage, BSS range, heap range, and address range checking:
+### `src/elf_det.h`
+Pure functions for CPU usage, BSS range, heap range, thread state, and address range checking:
 - `compute_usage_permyriad()` - CPU usage calculation
 - `compute_bss_range()` - BSS boundary validation
 - `compute_heap_range()` - Heap boundary validation
@@ -89,7 +89,7 @@ Pure functions for CPU usage, BSS range, heap range, and address range checking:
 
 Works in both kernel and user space contexts.
 
-### `src/user_helpers.h`
+### `src/proc_elf_ctrl.h`
 Path building with environment override:
 - `build_proc_path()` - Constructs `/proc/elf_det/` paths with `ELF_DET_PROC_DIR` support
 

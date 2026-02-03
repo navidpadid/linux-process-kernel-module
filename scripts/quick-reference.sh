@@ -107,8 +107,8 @@ PROJECT STRUCTURE
   src/proc_elf_ctrl.c         - User program source
   src/elf_det_tests.c         - Unit tests for elf_det
   src/proc_elf_ctrl_tests.c   - Unit tests for proc_elf_ctrl
-  src/elf_helpers.h           - Helper functions (CPU, BSS, heap)
-  src/user_helpers.h          - Helper functions (path building)
+  src/elf_det.h               - Helper functions (CPU, BSS, heap, thread)
+  src/proc_elf_ctrl.h         - Helper functions (path building)
   build/                      - Compiled artifacts
 
 

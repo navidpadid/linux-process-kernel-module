@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include "user_helpers.h"
+#include "proc_elf_ctrl.h"
 
 static void print_process_info(const char *pid_str)
 {
