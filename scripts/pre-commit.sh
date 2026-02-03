@@ -23,11 +23,11 @@ FAILED=0
 if check_tool clang-format; then
     echo "Checking code formatting..."
     if ! make format-check >/dev/null 2>&1; then
-        echo "Code formatting check failed!"
+        echo "[x] Code formatting check failed!"
         echo "   Run 'make format' to fix formatting issues"
         FAILED=1
     else
-        echo "Code formatting check passed"
+        echo "[✓] Code formatting check passed"
     fi
 else
     echo "Skipping format check (clang-format not installed)"
@@ -39,10 +39,10 @@ echo ""
 if check_tool cppcheck; then
     echo "Running cppcheck..."
     if make cppcheck 2>&1 | grep -q "error:"; then
-        echo "Cppcheck found potential issues"
+        echo "[x] Cppcheck found potential issues"
         FAILED=1
     else
-        echo "Cppcheck passed"
+        echo "[✓] Cppcheck passed"
     fi
 else
     echo "Skipping cppcheck (not installed)"
@@ -60,13 +60,13 @@ if [ -f /lib/modules/$(uname -r)/build/scripts/checkpatch.pl ]; then
         for file in $STAGED_FILES; do
             if [ -f "$file" ]; then
                 if /lib/modules/$(uname -r)/build/scripts/checkpatch.pl --no-tree --file "$file" 2>&1 | grep -q "ERROR:"; then
-                    echo "Checkpatch found errors in $file"
+                    echo "[x] Checkpatch found errors in $file"
                     FAILED=1
                 fi
             fi
         done
         if [ $FAILED -eq 0 ]; then
-            echo "Checkpatch passed"
+            echo "[✓] Checkpatch passed"
         fi
     fi
 else
@@ -77,12 +77,12 @@ echo ""
 echo "================================================"
 
 if [ $FAILED -eq 1 ]; then
-    echo "Pre-commit checks failed!"
+    echo "[x] Pre-commit checks failed!"
     echo ""
     echo "Fix the issues or use 'git commit --no-verify' to skip checks"
     exit 1
 else
-    echo "All pre-commit checks passed!"
+    echo "[✓] All pre-commit checks passed!"
 fi
 
 exit 0
