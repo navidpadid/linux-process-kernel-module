@@ -6,6 +6,7 @@
 typedef u64 eh_u64;
 #else
 #include <stdint.h>
+#include <stdio.h>
 typedef uint64_t eh_u64;
 #endif
 
@@ -72,4 +73,74 @@ static inline int is_address_in_range(unsigned long addr,
 	if (addr >= range_start && addr < range_end)
 		return 1;
 	return 0;
+}
+
+/* Convert thread/task state value to single character representation
+ * Kernel state constants (only available in kernel context):
+ * - TASK_RUNNING (0x0000) -> 'R'
+ * - TASK_INTERRUPTIBLE (0x0001) -> 'S'
+ * - TASK_UNINTERRUPTIBLE (0x0002) -> 'D'
+ * - __TASK_STOPPED (0x0004) -> 'T'
+ * - __TASK_TRACED (0x0008) -> 't'
+ * - EXIT_ZOMBIE (0x0020) -> 'Z'
+ * - EXIT_DEAD (0x0040) -> 'X'
+ * For testing: pass raw state values (0, 1, 2, 4, 8, 32, 64)
+ */
+static inline char get_thread_state_char(unsigned long state)
+{
+	switch (state) {
+	case 0x0000: /* TASK_RUNNING */
+		return 'R';
+	case 0x0001: /* TASK_INTERRUPTIBLE */
+		return 'S';
+	case 0x0002: /* TASK_UNINTERRUPTIBLE */
+		return 'D';
+	case 0x0004: /* __TASK_STOPPED */
+		return 'T';
+	case 0x0008: /* __TASK_TRACED */
+		return 't';
+	case 0x0020: /* EXIT_ZOMBIE */
+		return 'Z';
+	case 0x0040: /* EXIT_DEAD */
+		return 'X';
+	default:
+		return '?';
+	}
+}
+
+/* Build CPU affinity mask string from bitmap
+ * Checks up to max_cpus and appends CPU numbers (comma-separated)
+ * Returns number of characters written (excluding null terminator)
+ * If no CPUs are set, writes "none"
+ *
+ * Parameters:
+ *   cpu_mask: array representing CPU bitmap (1 = CPU available, 0 = not)
+ *   max_cpus: maximum number of CPUs to check
+ *   out_buf: output buffer for the affinity string
+ *   buf_size: size of output buffer
+ */
+static inline int build_cpu_affinity_string(const int *cpu_mask, int max_cpus,
+					    char *out_buf, int buf_size)
+{
+	int i, len = 0;
+	int has_cpu = 0;
+
+	if (!out_buf || buf_size < 5)
+		return 0;
+
+	for (i = 0; i < max_cpus && len < buf_size - 2; i++) {
+		if (cpu_mask[i]) {
+			has_cpu = 1;
+			len +=
+			    snprintf(out_buf + len, buf_size - len, "%d,", i);
+		}
+	}
+
+	if (has_cpu && len > 0) {
+		out_buf[len - 1] = '\0'; /* Remove trailing comma */
+		return len - 1;
+	}
+
+	snprintf(out_buf, buf_size, "none");
+	return 4;
 }

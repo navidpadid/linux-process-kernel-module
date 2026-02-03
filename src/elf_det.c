@@ -186,58 +186,26 @@ static int elfdet_threads_show(struct seq_file *m, void *v)
 	{
 		char state_char;
 		char cpu_affinity[32];
-		int i, aff_len = 0;
+		int cpu_mask[8] = {0};
+		int i;
 
 		thread_count++;
 
-		/* Get thread state */
-		switch (READ_ONCE(thread->__state)) {
-		case TASK_RUNNING:
-			state_char = 'R';
-			break;
-		case TASK_INTERRUPTIBLE:
-			state_char = 'S';
-			break;
-		case TASK_UNINTERRUPTIBLE:
-			state_char = 'D';
-			break;
-		case __TASK_STOPPED:
-			state_char = 'T';
-			break;
-		case __TASK_TRACED:
-			state_char = 't';
-			break;
-		case EXIT_DEAD:
-			state_char = 'X';
-			break;
-		case EXIT_ZOMBIE:
-			state_char = 'Z';
-			break;
-		default:
-			state_char = '?';
-			break;
-		}
+		/* Get thread state using helper function */
+		state_char = get_thread_state_char(READ_ONCE(thread->__state));
 
 		/* CPU usage for this thread */
 		total_ns = (u64)thread->utime + (u64)thread->stime;
 		delta_ns = ktime_get_ns() - thread->start_time;
 		usage_permyriad = compute_usage_permyriad(total_ns, delta_ns);
 
-		/* Build CPU affinity mask string (show first 8 CPUs) */
+		/* Build CPU affinity mask array (show first 8 CPUs) */
 		for (i = 0; i < 8 && i < nr_cpu_ids; i++) {
-			if (cpumask_test_cpu(i, &thread->cpus_mask)) {
-				if (aff_len < sizeof(cpu_affinity) - 2)
-					aff_len += snprintf(
-					    cpu_affinity + aff_len,
-					    sizeof(cpu_affinity) - aff_len,
-					    "%d,", i);
-			}
+			cpu_mask[i] =
+			    cpumask_test_cpu(i, &thread->cpus_mask) ? 1 : 0;
 		}
-		if (aff_len > 0)
-			cpu_affinity[aff_len - 1] =
-			    '\0'; // Remove trailing comma
-		else
-			snprintf(cpu_affinity, sizeof(cpu_affinity), "none");
+		build_cpu_affinity_string(cpu_mask, 8, cpu_affinity,
+					  sizeof(cpu_affinity));
 
 		seq_printf(
 		    m,

@@ -50,20 +50,38 @@ lsmod | grep elf_det
 
 echo "Checking /proc entries..."
 ls -la /proc/elf_det/
+echo "Expected files: det, pid, threads"
 
 echo ""
-echo "Testing with current shell process (PID: $$)..."
+echo "=== Testing Process Information (PID: $$) ==="
 echo "$$" | sudo tee /proc/elf_det/pid > /dev/null
 sudo cat /proc/elf_det/det
 
 echo ""
-echo "Testing with PID 1 (init/systemd)..."
-echo "1" | sudo tee /proc/elf_det/pid > /dev/null
-sudo cat /proc/elf_det/det
+echo "=== Testing Thread Information (PID: $$) ==="
+sudo cat /proc/elf_det/threads
 
 echo ""
-echo "Testing with user program (proc_elf_ctrl, PID=1)..."
+echo "=== Testing with PID 1 (init/systemd) ==="
+echo "1" | sudo tee /proc/elf_det/pid > /dev/null
+echo "Process info:"
+sudo cat /proc/elf_det/det
+echo ""
+echo "Thread info:"
+sudo cat /proc/elf_det/threads
+
+echo ""
+echo "=== Testing with user program (proc_elf_ctrl, PID=1) ==="
 ./build/proc_elf_ctrl 1 || true
+
+echo ""
+echo "=== Verifying all proc files are accessible ==="
+if [ -r /proc/elf_det/det ] && [ -r /proc/elf_det/pid ] && [ -r /proc/elf_det/threads ]; then
+    echo "[PASS] All proc files exist and are readable"
+else
+    echo "[FAIL] Some proc files are missing or not readable"
+    exit 1
+fi
 
 echo ""
 echo "Checking kernel logs..."
