@@ -17,6 +17,63 @@
 - **Comprehensive Testing**: Unit tests and QEMU-based E2E testing
 - **Code Quality**: Pre-configured static analysis (sparse, cppcheck, checkpatch)
 
+### Example Output
+
+```
+>> Enter process ID (or Ctrl+C to exit): 3115
+
+================================================================================
+                          PROCESS INFORMATION                                   
+================================================================================
+Command line:   ./build/test_multithread 
+Process ID:      3115
+Name:            test_multithrea
+CPU Usage:       2.06%
+
+Memory Layout:
+--------------------------------------------------------------------------------
+  Code Section:    0x0000643f5b8f5000 - 0x0000643f5b8f5459
+  Data Section:    0x0000643f5b8f7d78 - 0x0000643f5b8f8010
+  BSS Section:     0x0000643f5b8f8010 - 0x0000643f87d3b000
+  Heap:            0x0000643f87d3b000 - 0x0000643f87d5c000
+  Stack:           0x00007ffcdf141220 - 0x00007ffcdf121000
+  ELF Base:        0x0000643f5b8f4000
+
+Memory Layout Visualization:
+--------------------------------------------------------------------------------
+Low:  0x0000643f5b8f5000
+
+CODE  (1 KB)
+      [=                                                 ]
+
+DATA  (664 B)
+      [=                                                 ]
+
+BSS   (708 MB)
+      [================================================= ]
+
+HEAP  (132 KB)
+      [=                                                 ]
+
+STACK (128 KB)
+      [=                                                 ]
+
+High: 0x00007ffcdf141220
+--------------------------------------------------------------------------------
+
+================================================================================
+                          THREAD INFORMATION                                    
+================================================================================
+TID    NAME             CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY
+-----  ---------------  -------  -----  --------  ----  ----------------
+3115   test_multithrea     2.06   S         0         0  0,1
+3117   test_multithrea     0.32   S         0         0  0,1
+3118   test_multithrea     0.29   S         0         0  0,1
+3119   test_multithrea     0.26   S         0         0  0,1
+3120   test_multithrea     0.14   S         0         0  0,1
+--------------------------------------------------------------------------------
+```
+
 ## Quick Start
 
 ### Prerequisites
@@ -40,6 +97,12 @@
    ./build/proc_elf_ctrl
    ```
 
+### Uninstall the Module
+
+```bash
+sudo make uninstall
+```
+
 ## Project Structure
 
 ```
@@ -53,67 +116,6 @@ kernel_module/
 └── Makefile            # Build system with quality checks
 ```
 
-The program will prompt you to enter a process ID (PID). You can find PIDs using:
-
-```bash
-ps aux | grep <process_name>
-```
-
-### 3. Example Output
-
-```
->> Enter process ID (or Ctrl+C to exit): 1234
-
-================================================================================
-                          PROCESS INFORMATION                                   
-================================================================================
-Process ID:      1234
-Name:            bash
-CPU Usage:       0.50%
-
-Memory Layout:
---------------------------------------------------------------------------------
-  Code Section:    0x0000563a00001234 - 0x0000563a00005678
-  Data Section:    0x0000563a00009abc - 0x0000563a0000def0
-  BSS Section:     0x0000563a0000def0 - 0x0000563a0000def0
-  Heap:            0x0000563b00000000 - 0x0000563b00008000
-  Stack:           0x00007ffd12345000 - 0x00007ffd12340000
-  ELF Base:        0x0000563a00001000
-
-Memory Layout Visualization:
---------------------------------------------------------------------------------
-Low:  0x0000563a00001234
-
-CODE  (82 KB)
-      [==                                                ]
-
-DATA  (5 KB)
-      [=                                                 ]
-
-BSS   (486 MB)
-      [==================================================]
-
-HEAP  (132 KB)
-      [==                                                ]
-
-STACK (131 KB)
-      [==                                                ]
-
-High: 0x00007ffd12345000
---------------------------------------------------------------------------------
-
-================================================================================
-                          THREAD INFORMATION                                    
-================================================================================
-TID    NAME      CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY
------  --------  -------  -----  --------  ----  ----------------
-01234  bash         0.50   S         0         0  0,1,2,3
-01235  worker       0.01   R         0         0  0,1
---------------------------------------------------------------------------------
-Total threads: 2
-================================================================================
-```
-
 **Notes**: 
 - **Memory Visualization**: Each region's bar length is proportional to its actual size
 - Sizes are automatically displayed in appropriate units (B, KB, or MB)
@@ -123,11 +125,7 @@ Total threads: 2
 - PRIORITY: Shown as nice value (-20 to 19, where lower is higher priority)
 - CPU_AFFINITY: Shows which CPUs the thread can run on
 
-### 4. Uninstall the Module
 
-```bash
-sudo make uninstall
-```
 
 ## Safe Testing with QEMU
 
