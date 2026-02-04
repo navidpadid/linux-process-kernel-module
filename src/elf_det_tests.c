@@ -99,6 +99,104 @@ int main(void)
 	assert(len == 1); /* "7" */
 	assert(strcmp(buf, "7") == 0);
 
+	/* format_size_with_unit tests */
+	char size_buf[32];
+
+	/* Test bytes */
+	len = format_size_with_unit(512, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "512 B") == 0);
+	assert(len > 0);
+
+	/* Test kilobytes */
+	len = format_size_with_unit(1024, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "1 KB") == 0);
+	assert(len > 0);
+
+	len = format_size_with_unit(2048, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "2 KB") == 0);
+
+	/* Test megabytes */
+	len = format_size_with_unit(1024 * 1024, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "1 MB") == 0);
+	assert(len > 0);
+
+	len =
+	    format_size_with_unit(5 * 1024 * 1024, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "5 MB") == 0);
+
+	/* Test edge cases */
+	len = format_size_with_unit(0, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "0 B") == 0);
+
+	len = format_size_with_unit(1023, size_buf, sizeof(size_buf));
+	assert(strcmp(size_buf, "1023 B") == 0);
+
+	/* calculate_bar_width tests */
+	int width;
+
+	/* Test normal proportions */
+	width = calculate_bar_width(100, 1000, 50);
+	assert(width == 5); /* 100/1000 * 50 = 5 */
+
+	width = calculate_bar_width(500, 1000, 50);
+	assert(width == 25); /* Half */
+
+	width = calculate_bar_width(1000, 1000, 50);
+	assert(width == 50); /* Full */
+
+	/* Test minimum width for non-zero sizes */
+	width = calculate_bar_width(1, 1000000, 50);
+	assert(width == 1); /* Should be at least 1 for non-zero */
+
+	/* Test zero size */
+	width = calculate_bar_width(0, 1000, 50);
+	assert(width == 0);
+
+	/* Test zero total (edge case) */
+	width = calculate_bar_width(100, 0, 50);
+	assert(width == 0);
+
+	/* generate_region_visualization tests */
+	struct memory_region region;
+	char viz_buf[256];
+
+	/* Test normal region */
+	region.name = "CODE";
+	region.size = 1024 * 1024; /* 1 MB */
+	region.exists = 1;
+	len = generate_region_visualization(&region, 25, 50, viz_buf,
+					    sizeof(viz_buf));
+	assert(len > 0);
+	assert(strstr(viz_buf, "CODE") != NULL);
+	assert(strstr(viz_buf, "1 MB") != NULL);
+	assert(strstr(viz_buf, "[=========================") != NULL);
+
+	/* Test small region */
+	region.name = "DATA";
+	region.size = 512; /* 512 B */
+	region.exists = 1;
+	len = generate_region_visualization(&region, 5, 50, viz_buf,
+					    sizeof(viz_buf));
+	assert(len > 0);
+	assert(strstr(viz_buf, "DATA") != NULL);
+	assert(strstr(viz_buf, "512 B") != NULL);
+
+	/* Test non-existent region */
+	region.name = "BSS";
+	region.size = 0;
+	region.exists = 0;
+	len = generate_region_visualization(&region, 0, 50, viz_buf,
+					    sizeof(viz_buf));
+	assert(len == 0); /* Should return 0 for non-existent regions */
+
+	/* Test zero size but exists flag set */
+	region.name = "HEAP";
+	region.size = 0;
+	region.exists = 1;
+	len = generate_region_visualization(&region, 0, 50, viz_buf,
+					    sizeof(viz_buf));
+	assert(len == 0); /* Should return 0 for zero size */
+
 	/* Test single CPU at start */
 	len = build_cpu_affinity_string(mask5, 8, buf, sizeof(buf));
 	assert(len == 1); /* "0" */

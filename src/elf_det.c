@@ -150,6 +150,75 @@ static int elfdet_show(struct seq_file *m, void *v)
 		   stack_end);
 	seq_printf(m, "  ELF Base:        0x%016lx\n", elf_base);
 
+	/* Visual representation of memory layout */
+	{
+		struct memory_region regions[5];
+		unsigned long total_size;
+		unsigned long lowest_addr = task->mm->start_code;
+		unsigned long highest_addr = stack_start;
+		const int BAR_WIDTH = 50;
+		int widths[5];
+		char viz_buf[256];
+		int i;
+
+		/* Setup regions */
+		regions[0].name = "CODE";
+		regions[0].size = task->mm->end_code - task->mm->start_code;
+		regions[0].exists = (regions[0].size > 0);
+
+		regions[1].name = "DATA";
+		regions[1].size = task->mm->end_data - task->mm->start_data;
+		regions[1].exists = (regions[1].size > 0);
+
+		regions[2].name = "BSS";
+		regions[2].size = bss_end - bss_start;
+		regions[2].exists = (regions[2].size > 0);
+
+		regions[3].name = "HEAP";
+		regions[3].size = heap_end - heap_start;
+		regions[3].exists = (regions[3].size > 0);
+
+		regions[4].name = "STACK";
+		regions[4].size = stack_start - stack_end;
+		regions[4].exists = (regions[4].size > 0);
+
+		/* Calculate total size */
+		total_size = 0;
+		for (i = 0; i < 5; i++) {
+			if (regions[i].exists)
+				total_size += regions[i].size;
+		}
+
+		if (total_size > 0) {
+			/* Calculate proportional widths */
+			for (i = 0; i < 5; i++) {
+				widths[i] = calculate_bar_width(
+				    regions[i].size, total_size, BAR_WIDTH);
+			}
+
+			seq_puts(m, "\n");
+			seq_puts(m, "Memory Layout Visualization:\n");
+			seq_puts(m, "------------------------------------------"
+				    "----------------"
+				    "----------------------\n");
+			seq_printf(m, "Low:  0x%016lx\n\n", lowest_addr);
+
+			/* Generate visualization for each region */
+			for (i = 0; i < 5; i++) {
+				if (generate_region_visualization(
+					&regions[i], widths[i], BAR_WIDTH,
+					viz_buf, sizeof(viz_buf)) > 0) {
+					seq_puts(m, viz_buf);
+				}
+			}
+
+			seq_printf(m, "High: 0x%016lx\n", highest_addr);
+			seq_puts(m, "------------------------------------------"
+				    "----------------"
+				    "----------------------\n");
+		}
+	}
+
 	return 0;
 }
 

@@ -144,3 +144,95 @@ static inline int build_cpu_affinity_string(const int *cpu_mask, int max_cpus,
 	snprintf(out_buf, buf_size, "none");
 	return 4;
 }
+
+/* Memory region structure for visualization */
+struct memory_region {
+	const char *name;
+	unsigned long size;
+	int exists; /* 1 if region should be displayed, 0 otherwise */
+};
+
+/* Format size with appropriate unit (B, KB, MB)
+ * Returns number of characters written (excluding null terminator)
+ */
+static inline int format_size_with_unit(unsigned long size, char *out_buf,
+					int buf_size)
+{
+	if (!out_buf || buf_size < 10)
+		return 0;
+
+	if (size >= 1024 * 1024)
+		return snprintf(out_buf, buf_size, "%lu MB",
+				size / (1024 * 1024));
+	else if (size >= 1024)
+		return snprintf(out_buf, buf_size, "%lu KB", size / 1024);
+	else
+		return snprintf(out_buf, buf_size, "%lu B", size);
+}
+
+/* Calculate proportional bar width for visualization
+ * Ensures at least 1 character width for non-zero sizes
+ * Returns the proportional width
+ */
+static inline int calculate_bar_width(unsigned long region_size,
+				      unsigned long total_size, int bar_width)
+{
+	int width;
+
+	if (total_size == 0)
+		return 0;
+
+	width = (region_size * bar_width) / total_size;
+
+	/* Ensure at least 1 char for non-zero sizes */
+	if (region_size > 0 && width == 0)
+		width = 1;
+
+	return width;
+}
+
+/* Generate memory visualization for a single region
+ * Writes the region name, size, and proportional bar to output buffer
+ * Returns number of characters written
+ *
+ * Parameters:
+ *   region: memory region information
+ *   width: calculated proportional width for this region
+ *   bar_width: total bar width for visualization
+ *   out_buf: output buffer
+ *   buf_size: size of output buffer
+ */
+static inline int
+generate_region_visualization(const struct memory_region *region, int width,
+			      int bar_width, char *out_buf, int buf_size)
+{
+	char size_str[32];
+	int len = 0;
+	int i;
+
+	if (!region || !out_buf || buf_size < 100)
+		return 0;
+
+	if (!region->exists || region->size == 0)
+		return 0;
+
+	/* Format size */
+	format_size_with_unit(region->size, size_str, sizeof(size_str));
+
+	/* Write region header */
+	len += snprintf(out_buf + len, buf_size - len, "%-5s (%s)\n",
+			region->name, size_str);
+
+	/* Write bar */
+	len += snprintf(out_buf + len, buf_size - len, "      [");
+
+	for (i = 0; i < width && len < buf_size - 2; i++)
+		len += snprintf(out_buf + len, buf_size - len, "=");
+
+	for (i = width; i < bar_width && len < buf_size - 2; i++)
+		len += snprintf(out_buf + len, buf_size - len, " ");
+
+	len += snprintf(out_buf + len, buf_size - len, "]\n\n");
+
+	return len;
+}
