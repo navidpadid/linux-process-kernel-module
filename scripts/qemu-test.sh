@@ -27,6 +27,7 @@ echo "1. Building kernel module locally..."
 cd "$PROJECT_ROOT"
 make clean
 make all
+make test-multithread
 
 echo ""
 echo "2. Copying files to QEMU VM..."
@@ -73,6 +74,37 @@ sudo cat /proc/elf_det/threads
 echo ""
 echo "=== Testing with user program (proc_elf_ctrl, PID=1) ==="
 ./build/proc_elf_ctrl 1 || true
+
+echo ""
+echo "=== Testing with multi-threaded application ==="
+# Run the multi-threaded program in background
+./build/test_multithread &
+MULTITHREAD_PID=$!
+echo "Started multi-threaded application (PID: $MULTITHREAD_PID)"
+
+# Give threads time to start
+sleep 1
+
+# Test with the multi-threaded process
+echo ""
+echo "Testing thread detection with multi-threaded process:"
+echo "$MULTITHREAD_PID" | sudo tee /proc/elf_det/pid > /dev/null
+echo ""
+echo "Process info:"
+sudo cat /proc/elf_det/det
+echo ""
+echo "Thread info (should show 5 threads: 1 main + 4 workers):"
+sudo cat /proc/elf_det/threads
+
+# Use the user program to display formatted output
+echo ""
+echo "Using proc_elf_ctrl with multi-threaded process:"
+./build/proc_elf_ctrl $MULTITHREAD_PID || true
+
+# Wait for multi-threaded program to finish
+wait $MULTITHREAD_PID
+echo ""
+echo "[PASS] Multi-threaded application test completed"
 
 echo ""
 echo "=== Verifying all proc files are accessible ==="

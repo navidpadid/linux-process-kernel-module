@@ -70,7 +70,7 @@ static int elfdet_show(struct seq_file *m, void *v)
 	unsigned long elf_base = 0;
 	u64 delta_ns, total_ns;
 	u64 usage_permyriad; // CPU usage in hundredths of a percent (X.XX%)
-	struct vm_area_struct *vma;
+	const struct vm_area_struct *vma;
 	struct ma_state mas;
 	int ret;
 
@@ -174,10 +174,9 @@ static int elfdet_threads_show(struct seq_file *m, void *v)
 	}
 
 	// Print header
-	seq_puts(
-	    m,
-	    "TID    NAME      CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY\n");
-	seq_puts(m, "-----  --------  -------  -----  --------  ----  "
+	seq_puts(m, "TID    NAME             CPU(%)   STATE  PRIORITY  NICE  "
+		    "CPU_AFFINITY\n");
+	seq_puts(m, "-----  ---------------  -------  -----  --------  ----  "
 		    "----------------\n");
 
 	// Iterate through all threads in the thread group
@@ -209,7 +208,7 @@ static int elfdet_threads_show(struct seq_file *m, void *v)
 
 		seq_printf(
 		    m,
-		    "%-5d  %-8.8s  %4llu.%02llu   %c      %4d      %4d  %s\n",
+		    "%-5d  %-15.15s  %4llu.%02llu   %c      %4d      %4d  %s\n",
 		    thread->pid, thread->comm, (usage_permyriad / 100),
 		    (usage_permyriad % 100), state_char,
 		    thread->prio - 120, /* Convert to nice value */

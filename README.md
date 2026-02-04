@@ -4,7 +4,7 @@
 [![Last Commit](https://img.shields.io/github/last-commit/navidpadid/process-info-kernel-module?style=for-the-badge&logo=git&logoColor=white)](https://github.com/navidpadid/process-info-kernel-module/commits/main)
 [![License](https://img.shields.io/badge/License-Dual%20BSD%2FGPL-blue?style=for-the-badge)](LICENSE)
 
-> A Linux kernel module that extracts detailed process information including memory layout, CPU usage, and ELF sections via `/proc` filesystem.
+> A Linux kernel module that extracts detailed process and it's thread information including memory layout, CPU usage, and ELF sections via `/proc` filesystem.
 
 ## Features
 
@@ -124,15 +124,23 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine t
 ## Makefile Targets
 
 ```bash
-make all            # Build kernel module and user program
-make install        # Install kernel module (requires root)
-make uninstall      # Remove kernel module
-make unit           # Run unit tests (no kernel required)
-make test           # Install module and run user program
+make all              # Build kernel module and user program
+make module           # Build kernel module only
+make user             # Build user program only
+make test-multithread # Build multi-threaded test program
+make install          # Install kernel module (requires root)
+make uninstall        # Remove kernel module
+make unit             # Run unit tests (no kernel required)
+make test             # Install module and run user program
 
-make format         # Format all source files
-make check          # Run all static analysis
-make clean          # Remove build artifacts
+make format           # Format all source files
+make format-check     # Check formatting (CI-friendly)
+make check            # Run all static analysis
+make checkpatch        # Check kernel coding style
+make sparse           # Run sparse static analyzer
+make cppcheck         # Run cppcheck static analyzer
+make clean            # Remove build artifacts
+make help             # Show help message
 ```
 
 ## Testing

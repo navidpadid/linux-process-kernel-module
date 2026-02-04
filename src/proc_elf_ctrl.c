@@ -5,6 +5,33 @@
 #include <stdlib.h>
 #include "proc_elf_ctrl.h"
 
+static void print_cmdline(const char *pid_str)
+{
+	char path[64];
+	char cmdline[1024];
+	FILE *fp;
+	size_t len;
+	size_t i;
+
+	snprintf(path, sizeof(path), "/proc/%s/cmdline", pid_str);
+	fp = fopen(path, "r");
+	if (!fp)
+		return;
+
+	len = fread(cmdline, 1, sizeof(cmdline) - 1, fp);
+	fclose(fp);
+	if (len == 0)
+		return;
+
+	cmdline[len] = '\0';
+	for (i = 0; i < len; i++) {
+		if (cmdline[i] == '\0')
+			cmdline[i] = ' ';
+	}
+
+	printf("Command line:   %s\n", cmdline);
+}
+
 static void print_process_info(const char *pid_str)
 {
 	FILE *fp;
@@ -33,6 +60,7 @@ static void print_process_info(const char *pid_str)
 	       "                 \n");
 	printf("==============================================================="
 	       "=================\n");
+	print_cmdline(pid_str);
 	det_path = build_proc_path("det");
 	fp = fopen(det_path, "r");
 	if (!fp) {

@@ -73,11 +73,11 @@ int main(void)
 	/* build_cpu_affinity_string tests */
 	char buf[64];
 	int len;
-	int mask1[8] = {1, 0, 1, 0, 1, 0, 1, 0}; /* CPUs 0,2,4,6 */
-	int mask2[8] = {1, 1, 1, 1, 1, 1, 1, 1}; /* All CPUs */
-	int mask3[8] = {0, 0, 0, 0, 0, 0, 0, 0}; /* No CPUs */
-	int mask4[8] = {0, 0, 0, 0, 0, 0, 0, 1}; /* Only CPU 7 */
-	int mask5[8] = {1, 0, 0, 0, 0, 0, 0, 0}; /* Only CPU 0 */
+	const int mask1[8] = {1, 0, 1, 0, 1, 0, 1, 0}; /* CPUs 0,2,4,6 */
+	const int mask2[8] = {1, 1, 1, 1, 1, 1, 1, 1}; /* All CPUs */
+	const int mask3[8] = {0, 0, 0, 0, 0, 0, 0, 0}; /* No CPUs */
+	const int mask4[8] = {0, 0, 0, 0, 0, 0, 0, 1}; /* Only CPU 7 */
+	const int mask5[8] = {1, 0, 0, 0, 0, 0, 0, 0}; /* Only CPU 0 */
 
 	/* Test normal mask */
 	len = build_cpu_affinity_string(mask1, 8, buf, sizeof(buf));
