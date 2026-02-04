@@ -9,6 +9,7 @@
 ## Features
 
 - **Process Memory Layout**: Code, Data, BSS, Heap, and Stack addresses
+- **Visual Memory Map**: Proportional bar chart visualization of memory regions
 - **Thread Information**: List all threads with TID, state, CPU usage, priority, and CPU affinity
 - **CPU Usage Tracking**: Real-time CPU percentage calculation per process and thread
 - **ELF Section Analysis**: Binary base address and section boundaries
@@ -79,6 +80,28 @@ Memory Layout:
   Stack:           0x00007ffd12345000 - 0x00007ffd12340000
   ELF Base:        0x0000563a00001000
 
+Memory Layout Visualization:
+--------------------------------------------------------------------------------
+Low:  0x0000563a00001234
+
+CODE  (82 KB)
+      [==                                                ]
+
+DATA  (5 KB)
+      [=                                                 ]
+
+BSS   (486 MB)
+      [==================================================]
+
+HEAP  (132 KB)
+      [==                                                ]
+
+STACK (131 KB)
+      [==                                                ]
+
+High: 0x00007ffd12345000
+--------------------------------------------------------------------------------
+
 ================================================================================
                           THREAD INFORMATION                                    
 ================================================================================
@@ -92,6 +115,9 @@ Total threads: 2
 ```
 
 **Notes**: 
+- **Memory Visualization**: Each region's bar length is proportional to its actual size
+- Sizes are automatically displayed in appropriate units (B, KB, or MB)
+- Low/High addresses show the memory address range of the process
 - BSS_START and BSS_END may be equal (zero-length BSS) in modern ELF binaries. This is normal.
 - Thread STATE: R=Running, S=Sleeping, D=Uninterruptible, T=Stopped, t=Traced, Z=Zombie, X=Dead
 - PRIORITY: Shown as nice value (-20 to 19, where lower is higher priority)

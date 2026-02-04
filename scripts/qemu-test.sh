@@ -73,7 +73,7 @@ sudo cat /proc/elf_det/threads
 
 echo ""
 echo "=== Testing with user program (proc_elf_ctrl, PID=1) ==="
-./build/proc_elf_ctrl 1 || true
+sudo ./build/proc_elf_ctrl 1 || true
 
 echo ""
 echo "=== Testing with multi-threaded application ==="
@@ -96,10 +96,12 @@ echo ""
 echo "Thread info (should show 5 threads: 1 main + 4 workers):"
 sudo cat /proc/elf_det/threads
 
+sleep 1
+
 # Use the user program to display formatted output
 echo ""
 echo "Using proc_elf_ctrl with multi-threaded process:"
-./build/proc_elf_ctrl $MULTITHREAD_PID || true
+sudo ./build/proc_elf_ctrl $MULTITHREAD_PID || true
 
 # Wait for multi-threaded program to finish
 wait $MULTITHREAD_PID

@@ -21,8 +21,8 @@ void *worker_thread(void *arg)
 		(void)tmp;
 
 		/* Sleep occasionally to avoid 100% CPU */
-		if (i % 1000 == 0) {
-			usleep(100000); /* 100ms */
+		if (i % 10000 == 0) {
+			usleep(100000); /* Sleep 100ms */
 		}
 	}
 
