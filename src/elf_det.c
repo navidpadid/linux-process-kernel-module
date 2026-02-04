@@ -32,6 +32,134 @@ static ssize_t procfile_read(struct file *, char __user *, size_t, loff_t *);
 static ssize_t procfile_write(struct file *, const char __user *, size_t,
 			      loff_t *);
 
+static void print_memory_layout(struct seq_file *m, struct task_struct *task,
+				unsigned long bss_start, unsigned long bss_end,
+				unsigned long heap_start,
+				unsigned long heap_end,
+				unsigned long stack_start,
+				unsigned long stack_end, unsigned long elf_base)
+{
+	seq_puts(m, "\nMemory Layout:\n");
+	seq_puts(m, "----------------------------------------------------------"
+		    "----------------------\n");
+	seq_printf(m, "  Code Section:    0x%016lx - 0x%016lx\n",
+		   task->mm->start_code, task->mm->end_code);
+	seq_printf(m, "  Data Section:    0x%016lx - 0x%016lx\n",
+		   task->mm->start_data, task->mm->end_data);
+	seq_printf(m, "  BSS Section:     0x%016lx - 0x%016lx\n", bss_start,
+		   bss_end);
+	seq_printf(m, "  Heap:            0x%016lx - 0x%016lx\n", heap_start,
+		   heap_end);
+	seq_printf(m, "  Stack:           0x%016lx - 0x%016lx\n", stack_start,
+		   stack_end);
+	seq_printf(m, "  ELF Base:        0x%016lx\n", elf_base);
+}
+
+static void print_memory_layout_visualization(
+    struct seq_file *m, struct task_struct *task, unsigned long bss_start,
+    unsigned long bss_end, unsigned long heap_start, unsigned long heap_end,
+    unsigned long stack_start, unsigned long stack_end)
+{
+	struct memory_region regions[5];
+	unsigned long total_size;
+	unsigned long lowest_addr = task->mm->start_code;
+	unsigned long highest_addr = stack_start;
+	const int BAR_WIDTH = 50;
+	int widths[5];
+	char viz_buf[256];
+	int i;
+
+	/* Setup regions */
+	regions[0].name = "CODE";
+	regions[0].size = task->mm->end_code - task->mm->start_code;
+	regions[0].exists = (regions[0].size > 0);
+
+	regions[1].name = "DATA";
+	regions[1].size = task->mm->end_data - task->mm->start_data;
+	regions[1].exists = (regions[1].size > 0);
+
+	regions[2].name = "BSS";
+	regions[2].size = bss_end - bss_start;
+	regions[2].exists = (regions[2].size > 0);
+
+	regions[3].name = "HEAP";
+	regions[3].size = heap_end - heap_start;
+	regions[3].exists = (regions[3].size > 0);
+
+	regions[4].name = "STACK";
+	regions[4].size = stack_start - stack_end;
+	regions[4].exists = (regions[4].size > 0);
+
+	/* Calculate total size */
+	total_size = 0;
+	for (i = 0; i < 5; i++) {
+		if (regions[i].exists)
+			total_size += regions[i].size;
+	}
+
+	if (total_size == 0)
+		return;
+
+	/* Calculate proportional widths */
+	for (i = 0; i < 5; i++) {
+		widths[i] =
+		    calculate_bar_width(regions[i].size, total_size, BAR_WIDTH);
+	}
+
+	seq_puts(m, "\n");
+	seq_puts(m, "Memory Layout Visualization:\n");
+	seq_puts(m, "------------------------------------------"
+		    "----------------"
+		    "----------------------\n");
+	seq_printf(m, "Low:  0x%016lx\n\n", lowest_addr);
+
+	/* Generate visualization for each region */
+	for (i = 0; i < 5; i++) {
+		if (generate_region_visualization(&regions[i], widths[i],
+						  BAR_WIDTH, viz_buf,
+						  sizeof(viz_buf)) > 0) {
+			seq_puts(m, viz_buf);
+		}
+	}
+
+	seq_printf(m, "High: 0x%016lx\n", highest_addr);
+	seq_puts(m, "------------------------------------------"
+		    "----------------"
+		    "----------------------\n");
+}
+
+static void print_thread_info_line(struct seq_file *m,
+				   struct task_struct *thread)
+{
+	char state_char;
+	char cpu_affinity[32];
+	int cpu_mask[8] = {0};
+	int i;
+	u64 total_ns, delta_ns, usage_permyriad;
+
+	/* Get thread state using helper function */
+	state_char = get_thread_state_char(READ_ONCE(thread->__state));
+
+	/* CPU usage for this thread */
+	total_ns = (u64)thread->utime + (u64)thread->stime;
+	delta_ns = ktime_get_ns() - thread->start_time;
+	usage_permyriad = compute_usage_permyriad(total_ns, delta_ns);
+
+	/* Build CPU affinity mask array (show first 8 CPUs) */
+	for (i = 0; i < 8 && i < nr_cpu_ids; i++) {
+		cpu_mask[i] = cpumask_test_cpu(i, &thread->cpus_mask) ? 1 : 0;
+	}
+	build_cpu_affinity_string(cpu_mask, 8, cpu_affinity,
+				  sizeof(cpu_affinity));
+
+	seq_printf(m,
+		   "%-5d  %-15.15s  %4llu.%02llu   %c      %4d      %4d  %s\n",
+		   thread->pid, thread->comm, (usage_permyriad / 100),
+		   (usage_permyriad % 100), state_char,
+		   thread->prio - 120, /* Convert to nice value */
+		   task_nice(thread), cpu_affinity);
+}
+
 // det proc file_operations starts
 
 /* Find the lower boundary of the stack VMA
@@ -135,89 +263,11 @@ static int elfdet_show(struct seq_file *m, void *v)
 	seq_printf(m, "Name:            %s\n", task->comm);
 	seq_printf(m, "CPU Usage:       %llu.%02llu%%\n",
 		   (usage_permyriad / 100), (usage_permyriad % 100));
-	seq_puts(m, "\nMemory Layout:\n");
-	seq_puts(m, "----------------------------------------------------------"
-		    "----------------------\n");
-	seq_printf(m, "  Code Section:    0x%016lx - 0x%016lx\n",
-		   task->mm->start_code, task->mm->end_code);
-	seq_printf(m, "  Data Section:    0x%016lx - 0x%016lx\n",
-		   task->mm->start_data, task->mm->end_data);
-	seq_printf(m, "  BSS Section:     0x%016lx - 0x%016lx\n", bss_start,
-		   bss_end);
-	seq_printf(m, "  Heap:            0x%016lx - 0x%016lx\n", heap_start,
-		   heap_end);
-	seq_printf(m, "  Stack:           0x%016lx - 0x%016lx\n", stack_start,
-		   stack_end);
-	seq_printf(m, "  ELF Base:        0x%016lx\n", elf_base);
-
-	/* Visual representation of memory layout */
-	{
-		struct memory_region regions[5];
-		unsigned long total_size;
-		unsigned long lowest_addr = task->mm->start_code;
-		unsigned long highest_addr = stack_start;
-		const int BAR_WIDTH = 50;
-		int widths[5];
-		char viz_buf[256];
-		int i;
-
-		/* Setup regions */
-		regions[0].name = "CODE";
-		regions[0].size = task->mm->end_code - task->mm->start_code;
-		regions[0].exists = (regions[0].size > 0);
-
-		regions[1].name = "DATA";
-		regions[1].size = task->mm->end_data - task->mm->start_data;
-		regions[1].exists = (regions[1].size > 0);
-
-		regions[2].name = "BSS";
-		regions[2].size = bss_end - bss_start;
-		regions[2].exists = (regions[2].size > 0);
-
-		regions[3].name = "HEAP";
-		regions[3].size = heap_end - heap_start;
-		regions[3].exists = (regions[3].size > 0);
-
-		regions[4].name = "STACK";
-		regions[4].size = stack_start - stack_end;
-		regions[4].exists = (regions[4].size > 0);
-
-		/* Calculate total size */
-		total_size = 0;
-		for (i = 0; i < 5; i++) {
-			if (regions[i].exists)
-				total_size += regions[i].size;
-		}
-
-		if (total_size > 0) {
-			/* Calculate proportional widths */
-			for (i = 0; i < 5; i++) {
-				widths[i] = calculate_bar_width(
-				    regions[i].size, total_size, BAR_WIDTH);
-			}
-
-			seq_puts(m, "\n");
-			seq_puts(m, "Memory Layout Visualization:\n");
-			seq_puts(m, "------------------------------------------"
-				    "----------------"
-				    "----------------------\n");
-			seq_printf(m, "Low:  0x%016lx\n\n", lowest_addr);
-
-			/* Generate visualization for each region */
-			for (i = 0; i < 5; i++) {
-				if (generate_region_visualization(
-					&regions[i], widths[i], BAR_WIDTH,
-					viz_buf, sizeof(viz_buf)) > 0) {
-					seq_puts(m, viz_buf);
-				}
-			}
-
-			seq_printf(m, "High: 0x%016lx\n", highest_addr);
-			seq_puts(m, "------------------------------------------"
-				    "----------------"
-				    "----------------------\n");
-		}
-	}
+	print_memory_layout(m, task, bss_start, bss_end, heap_start, heap_end,
+			    stack_start, stack_end, elf_base);
+	print_memory_layout_visualization(m, task, bss_start, bss_end,
+					  heap_start, heap_end, stack_start,
+					  stack_end);
 
 	return 0;
 }
@@ -227,7 +277,6 @@ static int elfdet_threads_show(struct seq_file *m, void *v)
 {
 	struct task_struct *task, *thread;
 	int ret, thread_count = 0;
-	u64 total_ns, delta_ns, usage_permyriad;
 
 	ret = kstrtoint(buff, 10, &user_pid);
 	if (ret != 0) {
@@ -252,36 +301,8 @@ static int elfdet_threads_show(struct seq_file *m, void *v)
 	rcu_read_lock();
 	for_each_thread(task, thread)
 	{
-		char state_char;
-		char cpu_affinity[32];
-		int cpu_mask[8] = {0};
-		int i;
-
 		thread_count++;
-
-		/* Get thread state using helper function */
-		state_char = get_thread_state_char(READ_ONCE(thread->__state));
-
-		/* CPU usage for this thread */
-		total_ns = (u64)thread->utime + (u64)thread->stime;
-		delta_ns = ktime_get_ns() - thread->start_time;
-		usage_permyriad = compute_usage_permyriad(total_ns, delta_ns);
-
-		/* Build CPU affinity mask array (show first 8 CPUs) */
-		for (i = 0; i < 8 && i < nr_cpu_ids; i++) {
-			cpu_mask[i] =
-			    cpumask_test_cpu(i, &thread->cpus_mask) ? 1 : 0;
-		}
-		build_cpu_affinity_string(cpu_mask, 8, cpu_affinity,
-					  sizeof(cpu_affinity));
-
-		seq_printf(
-		    m,
-		    "%-5d  %-15.15s  %4llu.%02llu   %c      %4d      %4d  %s\n",
-		    thread->pid, thread->comm, (usage_permyriad / 100),
-		    (usage_permyriad % 100), state_char,
-		    thread->prio - 120, /* Convert to nice value */
-		    task_nice(thread), cpu_affinity);
+		print_thread_info_line(m, thread);
 	}
 	rcu_read_unlock();
 
