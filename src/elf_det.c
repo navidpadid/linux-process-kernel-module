@@ -137,8 +137,8 @@ static void print_thread_info_line(struct seq_file *m,
 	int i;
 	u64 total_ns, delta_ns, usage_permyriad;
 
-	/* Get thread state using helper function */
-	state_char = get_thread_state_char(READ_ONCE(thread->__state));
+	/* Get thread state using kernel helper */
+	state_char = task_state_to_char(thread);
 
 	/* CPU usage for this thread */
 	total_ns = (u64)thread->utime + (u64)thread->stime;
