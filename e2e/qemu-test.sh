@@ -19,7 +19,7 @@ echo "==================================================="
 # Check if VM is running
 if ! ssh $SSH_OPTS -o ConnectTimeout=5 -o BatchMode=yes ${SSH_USER}@${SSH_HOST} exit 2>/dev/null; then
     echo "ERROR: QEMU VM is not running or SSH is not accessible"
-    echo "Start the VM first with: ./scripts/qemu-run.sh"
+    echo "Start the VM first with: ./e2e/qemu-run.sh"
     exit 1
 fi
 
@@ -27,6 +27,7 @@ echo "1. Building kernel module locally..."
 cd "$PROJECT_ROOT"
 make clean
 make all
+make test-multithread
 
 echo ""
 echo "2. Copying files to QEMU VM..."
@@ -50,20 +51,71 @@ lsmod | grep elf_det
 
 echo "Checking /proc entries..."
 ls -la /proc/elf_det/
+echo "Expected files: det, pid, threads"
 
 echo ""
-echo "Testing with current shell process (PID: $$)..."
+echo "=== Testing Process Information (PID: $$) ==="
 echo "$$" | sudo tee /proc/elf_det/pid > /dev/null
 sudo cat /proc/elf_det/det
 
 echo ""
-echo "Testing with PID 1 (init/systemd)..."
-echo "1" | sudo tee /proc/elf_det/pid > /dev/null
-sudo cat /proc/elf_det/det
+echo "=== Testing Thread Information (PID: $$) ==="
+sudo cat /proc/elf_det/threads
 
 echo ""
-echo "Testing with user program (proc_elf_ctrl, PID=1)..."
-./build/proc_elf_ctrl 1 || true
+echo "=== Testing with PID 1 (init/systemd) ==="
+echo "1" | sudo tee /proc/elf_det/pid > /dev/null
+echo "Process info:"
+sudo cat /proc/elf_det/det
+echo ""
+echo "Thread info:"
+sudo cat /proc/elf_det/threads
+
+echo ""
+echo "=== Testing with user program (proc_elf_ctrl, PID=1) ==="
+sudo ./build/proc_elf_ctrl 1 || true
+
+echo ""
+echo "=== Testing with multi-threaded application ==="
+# Run the multi-threaded program in background
+./build/test_multithread &
+MULTITHREAD_PID=$!
+echo "Started multi-threaded application (PID: $MULTITHREAD_PID)"
+
+# Give threads time to start
+sleep 1
+
+# Test with the multi-threaded process
+echo ""
+echo "Testing thread detection with multi-threaded process:"
+echo "$MULTITHREAD_PID" | sudo tee /proc/elf_det/pid > /dev/null
+echo ""
+echo "Process info:"
+sudo cat /proc/elf_det/det
+echo ""
+echo "Thread info (should show 5 threads: 1 main + 4 workers):"
+sudo cat /proc/elf_det/threads
+
+sleep 1
+
+# Use the user program to display formatted output
+echo ""
+echo "Using proc_elf_ctrl with multi-threaded process:"
+sudo ./build/proc_elf_ctrl $MULTITHREAD_PID || true
+
+# Wait for multi-threaded program to finish
+wait $MULTITHREAD_PID
+echo ""
+echo "[PASS] Multi-threaded application test completed"
+
+echo ""
+echo "=== Verifying all proc files are accessible ==="
+if [ -r /proc/elf_det/det ] && [ -r /proc/elf_det/pid ] && [ -r /proc/elf_det/threads ]; then
+    echo "[PASS] All proc files exist and are readable"
+else
+    echo "[FAIL] Some proc files are missing or not readable"
+    exit 1
+fi
 
 echo ""
 echo "Checking kernel logs..."

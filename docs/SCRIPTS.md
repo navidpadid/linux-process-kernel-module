@@ -6,13 +6,13 @@ Scripts for testing the Linux Process Information Kernel Module in isolated QEMU
 
 ```bash
 # QEMU Testing
-./scripts/qemu-setup.sh      # One-time setup
-./scripts/qemu-run.sh         # Start VM
-./scripts/qemu-test.sh        # Automated tests (run from host in another terminal)
+./e2e/qemu-setup.sh      # One-time setup
+./e2e/qemu-run.sh         # Start VM
+./e2e/qemu-test.sh        # Automated tests (run from host in another terminal)
 
 # Other utilities
-./scripts/pre-commit.sh       # Pre-commit hook (auto-installed in dev container)
-./scripts/quick-reference.sh  # Display quick reference guide
+./.github/pre-commit.sh       # Pre-commit hook (auto-installed in dev container)
+./e2e/quick-reference.sh      # Display quick reference guide
 ```
 
 ## Script Descriptions
@@ -69,15 +69,15 @@ Scripts for testing the Linux Process Information Kernel Module in isolated QEMU
 **Usage**:
 ```bash
 # Start VM in one terminal
-./scripts/qemu-run.sh
+./e2e/qemu-run.sh
 
 # Run tests from another terminal
-./scripts/qemu-test.sh
+./e2e/qemu-test.sh
 ```
 
 **Output**: Shows build process, module loading, test results, and kernel logs.
 
-### `pre-commit.sh`
+### `.github/pre-commit.sh`
 **Purpose**: Git pre-commit hook for code quality
 
 **What it does**:
@@ -105,7 +105,7 @@ git commit --no-verify -m "message"
 
 **Usage**:
 ```bash
-./scripts/quick-reference.sh
+./e2e/quick-reference.sh
 ```
 
 ## QEMU VM Details
@@ -160,13 +160,13 @@ rsync -avz --exclude='.git' --exclude='build' \
 
 ### Remove QEMU Environment
 ```bash
-rm -rf scripts/qemu-env/
+rm -rf e2e/qemu-env/
 ```
 
 ### Reinstall Fresh VM
 ```bash
-rm -rf scripts/qemu-env/
-./scripts/qemu-setup.sh
+rm -rf e2e/qemu-env/
+./e2e/qemu-setup.sh
 ```
 
 ### Check VM Status

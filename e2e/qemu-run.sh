@@ -24,7 +24,7 @@ if ! command -v "$QEMU_BIN" >/dev/null 2>&1; then
 fi
 if ! command -v "$QEMU_BIN" >/dev/null 2>&1 && [ ! -x "$QEMU_BIN" ]; then
   echo "ERROR: qemu-system-x86_64 not found in PATH."
-  echo "Hint: run ./scripts/qemu-setup.sh to install QEMU, or ensure /snap/bin is in PATH for snap installs."
+  echo "Hint: run ./e2e/qemu-setup.sh to install QEMU, or ensure /snap/bin is in PATH for snap installs."
   echo "For apt-based systems: sudo apt-get install -y qemu-system-x86 qemu-utils"
   exit 1
 fi
@@ -32,7 +32,7 @@ fi
 # Check if setup was run
 if [ ! -f "$QEMU_DIR/ubuntu-${UBUNTU_VERSION}.img" ]; then
     echo "ERROR: QEMU environment not set up!"
-    echo "Run: ./scripts/qemu-setup.sh first"
+  echo "Run: ./e2e/qemu-setup.sh first"
     exit 1
 fi
 

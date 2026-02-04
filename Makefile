@@ -39,6 +39,13 @@ user:
 	gcc -Wall -o $(BUILD_DIR)/$(USER_PROG) $(SRC_DIR)/$(USER_PROG).c
 	@echo "User program built successfully!"
 
+# Build multi-threaded test program (for E2E testing)
+test-multithread:
+	@echo "Building multi-threaded test program..."
+	@mkdir -p $(BUILD_DIR)
+	gcc -Wall -pthread -o $(BUILD_DIR)/test_multithread $(SRC_DIR)/test_multithread.c
+	@echo "Multi-threaded test program built successfully!"
+
 # Function-level unit tests (user-space)
 unit:
 	@echo "Building function-level unit tests..."
@@ -172,6 +179,7 @@ help:
 	@echo "  make all        - Build both kernel module and user program (default)"
 	@echo "  make module     - Build kernel module only"
 	@echo "  make user       - Build user program only"
+	@echo "  make test-multithread - Build multi-threaded test program"
 	@echo "  make unit       - Build and run function-level unit tests"
 	@echo "  make install    - Install kernel module (requires root)"
 	@echo "  make uninstall  - Remove kernel module (requires root)"

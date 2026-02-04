@@ -206,7 +206,7 @@ fi
 echo "  - SSH Port: 2222 (forwarded from host)"
 echo ""
 echo "Next steps:"
-echo "  1. Run: ./scripts/qemu-run.sh"
+echo "  1. Run: ./e2e/qemu-run.sh"
 if [ -n "$SSH_KEY" ]; then
 echo "  2. SSH without password: ssh -p 2222 ubuntu@localhost"
 else

@@ -20,12 +20,12 @@ LOCAL TESTING (No Kernel Required)
 
 QEMU SETUP (Run Once)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ./scripts/qemu-setup.sh
+  ./e2e/qemu-setup.sh
 
 
 START VM
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ./scripts/qemu-run.sh
+  ./e2e/qemu-run.sh
 
   Login: ubuntu / ubuntu
   Exit:  Ctrl+A then X
@@ -34,7 +34,7 @@ START VM
 AUTO TEST (From Host, in Another Terminal)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # Full automated test suite
-  ./scripts/qemu-test.sh
+  ./e2e/qemu-test.sh
 
 
 CONNECT TO VM
@@ -95,10 +95,10 @@ BUILD TARGETS
 CLEANUP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # Remove QEMU environment
-  rm -rf scripts/qemu-env/
+  rm -rf e2e/qemu-env/
 
   # Start fresh
-  ./scripts/qemu-setup.sh
+  ./e2e/qemu-setup.sh
 
 
 PROJECT STRUCTURE
@@ -107,8 +107,8 @@ PROJECT STRUCTURE
   src/proc_elf_ctrl.c         - User program source
   src/elf_det_tests.c         - Unit tests for elf_det
   src/proc_elf_ctrl_tests.c   - Unit tests for proc_elf_ctrl
-  src/elf_helpers.h           - Helper functions (CPU, BSS, heap)
-  src/user_helpers.h          - Helper functions (path building)
+  src/elf_det.h               - Helper functions (CPU, BSS, heap, thread)
+  src/proc_elf_ctrl.h         - Helper functions (path building)
   build/                      - Compiled artifacts
 
 
@@ -160,14 +160,14 @@ TROUBLESHOOTING
   ssh -p 2222 ubuntu@localhost
 
   # Reset QEMU environment
-  rm -rf scripts/qemu-env/
-  ./scripts/qemu-setup.sh
+  rm -rf e2e/qemu-env/
+  ./e2e/qemu-setup.sh
 
 
 MORE INFO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   README.md          - Complete project documentation
-  scripts/README.md  - QEMU testing details
+  docs/TESTING.md    - QEMU testing details
   LICENSE            - Dual BSD/GPL license
 
 EOF

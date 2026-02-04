@@ -9,7 +9,7 @@ make unit
 ```
 
 This builds and runs:
-- `src/elf_det_tests.c` – verifies `compute_usage_permyriad()`, `compute_bss_range()`, `compute_heap_range()`, and `is_address_in_range()`
+- `src/elf_det_tests.c` – verifies `compute_usage_permyriad()`, `compute_bss_range()`, `compute_heap_range()`, `is_address_in_range()`, `get_thread_state_char()`, and `build_cpu_affinity_string()`
 - `src/proc_elf_ctrl_tests.c` – verifies `build_proc_path()` with and without `ELF_DET_PROC_DIR`
 
 Artifacts are created under `build/`.
@@ -22,13 +22,13 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine.
 
 ```bash
 # One-time setup
-./scripts/qemu-setup.sh
+./e2e/qemu-setup.sh
 
 # Start VM
-./scripts/qemu-run.sh
+./e2e/qemu-run.sh
 
 # In another terminal, run automated tests
-./scripts/qemu-test.sh
+./e2e/qemu-test.sh
 ```
 
 ### What QEMU Testing Does
@@ -41,7 +41,7 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine.
 
 ### Manual Testing in QEMU
 
-After starting the VM with `./scripts/qemu-run.sh`:
+After starting the VM with `./e2e/qemu-run.sh`:
 
 ```bash
 # SSH into the VM
@@ -73,8 +73,8 @@ sudo make uninstall
 
 ```bash
 # Remove QEMU environment and start fresh
-rm -rf scripts/qemu-env/
-./scripts/qemu-setup.sh
+rm -rf e2e/qemu-env/
+./e2e/qemu-setup.sh
 ```
 
 ## Kernel Compatibility
@@ -117,6 +117,35 @@ make all
 # Ensure module is loaded
 lsmod | grep elf_det
 
-# Check proc entries exist
+# Check proc entries exist (should show det, pid, threads)
 ls -la /proc/elf_det/
 ```
+
+### Testing Thread Information
+
+```bash
+# Test with single-threaded process
+./build/proc_elf_ctrl $$
+
+# Test with multi-threaded process
+# Start a process with multiple threads (e.g., Firefox, Chrome)
+ps aux | grep firefox  # Get PID
+./build/proc_elf_ctrl <PID>
+
+# Manually check thread info
+echo "<PID>" | sudo tee /proc/elf_det/pid
+sudo cat /proc/elf_det/threads
+```
+
+### Verify Thread Features
+
+The thread output should include:
+- TID (Thread ID)
+- Thread name
+- Per-thread CPU usage
+- Thread state (R/S/D/T/t/Z/X)
+- Priority and nice values
+- CPU affinity mask
+- Total thread count
+
+Multi-threaded processes (browsers, IDEs, servers) will show multiple threads.
