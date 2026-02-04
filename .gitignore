@@ -49,7 +49,7 @@ core.*
 *.backup
 
 # QEMU testing environment
-scripts/qemu-env/
+e2e/qemu-env/
 *~
 
 # Static analysis output

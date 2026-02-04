@@ -22,13 +22,13 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine.
 
 ```bash
 # One-time setup
-./scripts/qemu-setup.sh
+./e2e/qemu-setup.sh
 
 # Start VM
-./scripts/qemu-run.sh
+./e2e/qemu-run.sh
 
 # In another terminal, run automated tests
-./scripts/qemu-test.sh
+./e2e/qemu-test.sh
 ```
 
 ### What QEMU Testing Does
@@ -41,7 +41,7 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine.
 
 ### Manual Testing in QEMU
 
-After starting the VM with `./scripts/qemu-run.sh`:
+After starting the VM with `./e2e/qemu-run.sh`:
 
 ```bash
 # SSH into the VM
@@ -73,8 +73,8 @@ sudo make uninstall
 
 ```bash
 # Remove QEMU environment and start fresh
-rm -rf scripts/qemu-env/
-./scripts/qemu-setup.sh
+rm -rf e2e/qemu-env/
+./e2e/qemu-setup.sh
 ```
 
 ## Kernel Compatibility

@@ -19,7 +19,7 @@ echo "==================================================="
 # Check if VM is running
 if ! ssh $SSH_OPTS -o ConnectTimeout=5 -o BatchMode=yes ${SSH_USER}@${SSH_HOST} exit 2>/dev/null; then
     echo "ERROR: QEMU VM is not running or SSH is not accessible"
-    echo "Start the VM first with: ./scripts/qemu-run.sh"
+    echo "Start the VM first with: ./e2e/qemu-run.sh"
     exit 1
 fi
 
