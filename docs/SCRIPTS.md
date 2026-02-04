@@ -11,7 +11,7 @@ Scripts for testing the Linux Process Information Kernel Module in isolated QEMU
 ./scripts/qemu-test.sh        # Automated tests (run from host in another terminal)
 
 # Other utilities
-./scripts/pre-commit.sh       # Pre-commit hook (auto-installed in dev container)
+./.github/pre-commit.sh       # Pre-commit hook (auto-installed in dev container)
 ./scripts/quick-reference.sh  # Display quick reference guide
 ```
 
@@ -77,7 +77,7 @@ Scripts for testing the Linux Process Information Kernel Module in isolated QEMU
 
 **Output**: Shows build process, module loading, test results, and kernel logs.
 
-### `pre-commit.sh`
+### `.github/pre-commit.sh`
 **Purpose**: Git pre-commit hook for code quality
 
 **What it does**:
