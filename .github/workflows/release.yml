@@ -21,6 +21,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' || 
       (github.event.pull_request.merged == true && 
+       !contains(github.event.pull_request.labels.*.name, 'not-a-release') &&
        (contains(github.event.pull_request.labels.*.name, 'release:major') ||
         contains(github.event.pull_request.labels.*.name, 'release:minor') ||
         contains(github.event.pull_request.labels.*.name, 'release:patch')))
@@ -40,6 +41,24 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate release labels
+        if: github.event_name == 'pull_request'
+        run: |
+          MAJOR="${{ contains(github.event.pull_request.labels.*.name, 'release:major') }}"
+          MINOR="${{ contains(github.event.pull_request.labels.*.name, 'release:minor') }}"
+          PATCH="${{ contains(github.event.pull_request.labels.*.name, 'release:patch') }}"
+          
+          COUNT=0
+          [[ "$MAJOR" == "true" ]] && COUNT=$((COUNT + 1))
+          [[ "$MINOR" == "true" ]] && COUNT=$((COUNT + 1))
+          [[ "$PATCH" == "true" ]] && COUNT=$((COUNT + 1))
+          
+          if [[ $COUNT -gt 1 ]]; then
+            echo "Error: Multiple release labels detected. Only one release label (major, minor, or patch) is allowed."
+            exit 1
+          fi
+          echo "Label validation passed: $COUNT release label(s) found"
 
       - name: Determine version bump type
         id: version_type
