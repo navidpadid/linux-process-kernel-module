@@ -57,10 +57,11 @@ Scripts for testing the Linux Process Information Kernel Module in isolated QEMU
 1. Syncs project files to VM
 2. Builds kernel module and user program in VM
 3. Loads kernel module
-4. Runs user program with test process
-5. Captures and displays output
-6. Unloads kernel module
-7. Cleans up
+4. Builds the multi-threaded test program
+5. Runs user program with test process
+6. Captures and displays output
+7. Unloads kernel module
+8. Cleans up
 
 **Requirements**:
 - QEMU VM must be running (`qemu-run.sh`)

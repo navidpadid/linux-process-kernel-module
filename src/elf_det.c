@@ -19,29 +19,33 @@
 MODULE_LICENSE("Dual BSD/GPL"); // module license
 
 static char buff[20] =
-    "1"; // the common(global) buffer between kernel and user space
+	"1"; // the common(global) buffer between kernel and user space
 static int user_pid; // the desired pid that we get from user
 static int number_opens; // number of opens(writes) to the pid file
 
 // skip these instances (will be described bellow)
 static struct proc_dir_entry *elfdet_dir, *elfdet_det_entry, *elfdet_pid_entry,
-    *elfdet_threads_entry;
+	*elfdet_threads_entry;
 
 static int procfile_open(struct inode *inode, struct file *file);
 static ssize_t procfile_read(struct file *, char __user *, size_t, loff_t *);
-static ssize_t procfile_write(struct file *, const char __user *, size_t,
-			      loff_t *);
+static ssize_t
+procfile_write(struct file *, const char __user *, size_t, loff_t *);
 
-static void print_memory_layout(struct seq_file *m, struct task_struct *task,
-				unsigned long bss_start, unsigned long bss_end,
+static void print_memory_layout(struct seq_file *m,
+				struct task_struct *task,
+				unsigned long bss_start,
+				unsigned long bss_end,
 				unsigned long heap_start,
 				unsigned long heap_end,
 				unsigned long stack_start,
-				unsigned long stack_end, unsigned long elf_base)
+				unsigned long stack_end,
+				unsigned long elf_base)
 {
 	seq_puts(m, "\nMemory Layout:\n");
-	seq_puts(m, "----------------------------------------------------------"
-		    "----------------------\n");
+	seq_puts(m,
+		 "----------------------------------------------------------");
+	seq_puts(m, "----------------------\n");
 	seq_printf(m, "  Code Section:    0x%016lx - 0x%016lx\n",
 		   task->mm->start_code, task->mm->end_code);
 	seq_printf(m, "  Data Section:    0x%016lx - 0x%016lx\n",
@@ -55,10 +59,14 @@ static void print_memory_layout(struct seq_file *m, struct task_struct *task,
 	seq_printf(m, "  ELF Base:        0x%016lx\n", elf_base);
 }
 
-static void print_memory_layout_visualization(
-    struct seq_file *m, struct task_struct *task, unsigned long bss_start,
-    unsigned long bss_end, unsigned long heap_start, unsigned long heap_end,
-    unsigned long stack_start, unsigned long stack_end)
+static void print_memory_layout_visualization(struct seq_file *m,
+					      struct task_struct *task,
+					      unsigned long bss_start,
+					      unsigned long bss_end,
+					      unsigned long heap_start,
+					      unsigned long heap_end,
+					      unsigned long stack_start,
+					      unsigned long stack_end)
 {
 	struct memory_region regions[5];
 	unsigned long total_size;
@@ -102,15 +110,15 @@ static void print_memory_layout_visualization(
 
 	/* Calculate proportional widths */
 	for (i = 0; i < 5; i++) {
-		widths[i] =
-		    calculate_bar_width(regions[i].size, total_size, BAR_WIDTH);
+		widths[i] = calculate_bar_width(regions[i].size, total_size,
+						BAR_WIDTH);
 	}
 
 	seq_puts(m, "\n");
 	seq_puts(m, "Memory Layout Visualization:\n");
-	seq_puts(m, "------------------------------------------"
-		    "----------------"
-		    "----------------------\n");
+	seq_puts(m, "------------------------------------------");
+	seq_puts(m, "----------------");
+	seq_puts(m, "----------------------\n");
 	seq_printf(m, "Low:  0x%016lx\n\n", lowest_addr);
 
 	/* Generate visualization for each region */
@@ -123,9 +131,9 @@ static void print_memory_layout_visualization(
 	}
 
 	seq_printf(m, "High: 0x%016lx\n", highest_addr);
-	seq_puts(m, "------------------------------------------"
-		    "----------------"
-		    "----------------------\n");
+	seq_puts(m, "------------------------------------------");
+	seq_puts(m, "----------------");
+	seq_puts(m, "----------------------\n");
 }
 
 static void print_thread_info_line(struct seq_file *m,
@@ -146,9 +154,8 @@ static void print_thread_info_line(struct seq_file *m,
 	usage_permyriad = compute_usage_permyriad(total_ns, delta_ns);
 
 	/* Build CPU affinity mask array (show first 8 CPUs) */
-	for (i = 0; i < 8 && i < nr_cpu_ids; i++) {
+	for (i = 0; i < 8 && i < nr_cpu_ids; i++)
 		cpu_mask[i] = cpumask_test_cpu(i, &thread->cpus_mask) ? 1 : 0;
-	}
 	build_cpu_affinity_string(cpu_mask, 8, cpu_affinity,
 				  sizeof(cpu_affinity));
 
@@ -186,6 +193,87 @@ static unsigned long find_stack_vma_end(struct mm_struct *mm,
 	}
 
 	return stack_end;
+}
+
+/* Calculate and display memory pressure statistics
+ * Includes RSS, PSS, swap usage, page faults, and OOM score
+ */
+static void print_memory_pressure(struct seq_file *m, struct task_struct *task)
+{
+	struct mm_struct *mm = task->mm;
+	unsigned long rss_pages, swap_pages, file_pages, anon_pages;
+	unsigned long shmem_pages;
+	unsigned long rss_kb, swap_kb;
+	unsigned long maj_flt, min_flt;
+	long oom_score;
+
+	if (!mm)
+		return;
+
+	/* Get RSS (Resident Set Size) - total physical memory used
+	 * RSS = file pages + anon pages + shared memory pages
+	 */
+	file_pages = get_mm_counter(mm, MM_FILEPAGES);
+	anon_pages = get_mm_counter(mm, MM_ANONPAGES);
+	shmem_pages = get_mm_counter(mm, MM_SHMEMPAGES);
+	rss_pages = file_pages + anon_pages + shmem_pages;
+	rss_kb = rss_pages << (PAGE_SHIFT - 10); // Convert pages to KB
+
+	/* Get swap usage */
+	swap_pages = get_mm_counter(mm, MM_SWAPENTS);
+	swap_kb = swap_pages << (PAGE_SHIFT - 10);
+
+	/* Get page faults from task_struct
+	 * Major faults: required disk I/O
+	 * Minor faults: resolved from memory/cache
+	 */
+	maj_flt = task->maj_flt;
+	min_flt = task->min_flt;
+
+	/* Calculate approximate OOM score
+	 * This is a simplified version based on RSS as percentage of total RAM
+	 * Real kernel OOM score is more complex but not exported to modules
+	 * Range: adjusted by oom_score_adj (-1000 to 1000)
+	 */
+	oom_score = task->signal->oom_score_adj;
+
+	seq_puts(m, "\nMemory Pressure Statistics:\n");
+	seq_puts(m,
+		 "----------------------------------------------------------");
+	seq_puts(m, "----------------------\n");
+
+	/* Display RSS breakdown */
+	seq_printf(m, "  RSS (Resident):  %lu KB\n", rss_kb);
+	seq_printf(m, "    - Anonymous:   %lu KB\n",
+		   anon_pages << (PAGE_SHIFT - 10));
+	seq_printf(m, "    - File-backed: %lu KB\n",
+		   file_pages << (PAGE_SHIFT - 10));
+	seq_printf(m, "    - Shared Mem:  %lu KB\n",
+		   shmem_pages << (PAGE_SHIFT - 10));
+
+	/* Virtual memory size */
+	seq_printf(m, "  VSZ (Virtual):   %lu KB\n",
+		   mm->total_vm << (PAGE_SHIFT - 10));
+
+	/* Swap usage */
+	seq_printf(m, "  Swap Usage:      %lu KB\n", swap_kb);
+
+	/* Page faults */
+	seq_puts(m, "  Page Faults:\n");
+	seq_printf(m, "    - Major:       %lu\n", maj_flt);
+	seq_printf(m, "    - Minor:       %lu\n", min_flt);
+	seq_printf(m, "    - Total:       %lu\n", maj_flt + min_flt);
+
+	/* OOM score adjustment
+	 * Negative values make process less likely to be OOM killed
+	 * Positive values make it more likely
+	 * Range: -1000 (never kill) to 1000 (always prefer)
+	 */
+	seq_printf(m, "  OOM Score Adj:   %ld\n", oom_score);
+
+	seq_puts(m,
+		 "----------------------------------------------------------");
+	seq_puts(m, "----------------------\n");
 }
 
 // this function is the base function to gather information from kernel
@@ -263,6 +351,7 @@ static int elfdet_show(struct seq_file *m, void *v)
 	seq_printf(m, "Name:            %s\n", task->comm);
 	seq_printf(m, "CPU Usage:       %llu.%02llu%%\n",
 		   (usage_permyriad / 100), (usage_permyriad % 100));
+	print_memory_pressure(m, task);
 	print_memory_layout(m, task, bss_start, bss_end, heap_start, heap_end,
 			    stack_start, stack_end, elf_base);
 	print_memory_layout_visualization(m, task, bss_start, bss_end,
@@ -292,22 +381,24 @@ static int elfdet_threads_show(struct seq_file *m, void *v)
 	}
 
 	// Print header
-	seq_puts(m, "TID    NAME             CPU(%)   STATE  PRIORITY  NICE  "
-		    "CPU_AFFINITY\n");
-	seq_puts(m, "-----  ---------------  -------  -----  --------  ----  "
-		    "----------------\n");
+	seq_puts(m, "TID    NAME             CPU(%)   STATE  PRIORITY  NICE  ");
+	seq_puts(m, "CPU_AFFINITY\n");
+	seq_puts(m, "-----  ---------------  -------  -----  --------  ----  ");
+	seq_puts(m, "----------------\n");
 
 	// Iterate through all threads in the thread group
 	rcu_read_lock();
-	for_each_thread(task, thread)
-	{
+	// clang-format off
+	for_each_thread(task, thread) {
 		thread_count++;
 		print_thread_info_line(m, thread);
 	}
+	// clang-format on
 	rcu_read_unlock();
 
-	seq_puts(m, "----------------------------------------------------------"
-		    "----------------------\n");
+	seq_puts(m,
+		 "----------------------------------------------------------");
+	seq_puts(m, "----------------------\n");
 	seq_printf(m, "Total threads: %d\n", thread_count);
 
 	return 0;
@@ -327,18 +418,18 @@ static int elfdet_threads_open(struct inode *inode, struct file *file)
 
 // file operations of det proc (using proc_ops for kernel 5.6+)
 static const struct proc_ops elfdet_det_ops = {
-    .proc_open = elfdet_open,
-    .proc_read = seq_read,
-    .proc_lseek = seq_lseek,
-    .proc_release = single_release,
+	.proc_open = elfdet_open,
+	.proc_read = seq_read,
+	.proc_lseek = seq_lseek,
+	.proc_release = single_release,
 };
 
 // file operations of threads proc
 static const struct proc_ops elfdet_threads_ops = {
-    .proc_open = elfdet_threads_open,
-    .proc_read = seq_read,
-    .proc_lseek = seq_lseek,
-    .proc_release = single_release,
+	.proc_open = elfdet_threads_open,
+	.proc_read = seq_read,
+	.proc_lseek = seq_lseek,
+	.proc_release = single_release,
 };
 
 // elf proc file_operations starts
@@ -355,8 +446,10 @@ static int procfile_open(struct inode *inode, struct file *file)
 
 // when we cat elf file this function will be run (this is useless here)
 // because our info is in det file not here!
-static ssize_t procfile_read(struct file *file, char __user *buffer,
-			     size_t length, loff_t *offset)
+static ssize_t procfile_read(struct file *file,
+			     char __user *buffer,
+			     size_t length,
+			     loff_t *offset)
 {
 	static int finished;
 	char tmp[64];
@@ -384,8 +477,10 @@ static ssize_t procfile_read(struct file *file, char __user *buffer,
 }
 
 // most important function of elf! called when we write some characters into it
-static ssize_t procfile_write(struct file *file, const char __user *buffer,
-			      size_t length, loff_t *offset)
+static ssize_t procfile_write(struct file *file,
+			      const char __user *buffer,
+			      size_t length,
+			      loff_t *offset)
 {
 	long ret;
 
@@ -400,9 +495,9 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer,
 }
 
 static const struct proc_ops write_pops = {
-    .proc_open = procfile_open,
-    .proc_read = procfile_read,
-    .proc_write = procfile_write, // this is the important part
+	.proc_open = procfile_open,
+	.proc_read = procfile_read,
+	.proc_write = procfile_write, // this is the important part
 };
 
 static int elfdet_init(void)
@@ -415,7 +510,7 @@ static int elfdet_init(void)
 
 	// 0644 means owner read/write, others read-only
 	elfdet_det_entry =
-	    proc_create("det", 0644, elfdet_dir, &elfdet_det_ops);
+		proc_create("det", 0644, elfdet_dir, &elfdet_det_ops);
 	// create proc file det with elfdet_det_ops
 	pr_info("det initiated; /proc/elf_det/det created\n");
 	elfdet_pid_entry = proc_create("pid", 0644, elfdet_dir, &write_pops);
@@ -423,7 +518,7 @@ static int elfdet_init(void)
 	pr_info("pid initiated; /proc/elf_det/pid created\n");
 
 	elfdet_threads_entry =
-	    proc_create("threads", 0644, elfdet_dir, &elfdet_threads_ops);
+		proc_create("threads", 0644, elfdet_dir, &elfdet_threads_ops);
 	// create proc file threads with elfdet_threads_ops
 	pr_info("threads initiated; /proc/elf_det/threads created\n");
 

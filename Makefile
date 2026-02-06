@@ -19,7 +19,7 @@ SRC_DIR := src
 # Build directory for user program
 BUILD_DIR := build
 
-.PHONY: all clean module user install uninstall test help unit check format checkpatch sparse cppcheck
+.PHONY: all clean module user install uninstall test help unit check format checkpatch sparse cppcheck build-multithread run-multithread
 
 # Default target
 all: module user
@@ -40,7 +40,7 @@ user:
 	@echo "User program built successfully!"
 
 # Build multi-threaded test program (for E2E testing)
-test-multithread:
+build-multithread:
 	@echo "Building multi-threaded test program..."
 	@mkdir -p $(BUILD_DIR)
 	gcc -Wall -pthread -o $(BUILD_DIR)/test_multithread $(SRC_DIR)/test_multithread.c
@@ -74,6 +74,19 @@ test: install
 	@echo "Running user program..."
 	@echo "Enter PID when prompted, or press Ctrl+C to exit"
 	$(BUILD_DIR)/$(USER_PROG)
+
+# Test multi-threaded functionality (requires root)
+run-multithread: install user build-multithread
+	@echo "Running multi-threaded test program with module..."
+	@set -e; \
+	$(BUILD_DIR)/test_multithread & \
+	TEST_PID=$$!; \
+	echo "Started test_multithread (PID: $$TEST_PID)"; \
+	sleep 1; \
+	sudo $(BUILD_DIR)/$(USER_PROG) $$TEST_PID || true; \
+	wait $$TEST_PID; \
+	$(MAKE) uninstall; \
+	echo "Multi-threaded test completed."
 
 # Clean build artifacts
 clean:
@@ -176,24 +189,31 @@ help:
 	@echo "Linux Process Information Kernel Module - Build Targets:"
 	@echo ""
 	@echo "Build Targets:"
-	@echo "  make all        - Build both kernel module and user program (default)"
-	@echo "  make module     - Build kernel module only"
-	@echo "  make user       - Build user program only"
-	@echo "  make test-multithread - Build multi-threaded test program"
-	@echo "  make unit       - Build and run function-level unit tests"
-	@echo "  make install    - Install kernel module (requires root)"
-	@echo "  make uninstall  - Remove kernel module (requires root)"
-	@echo "  make test       - Install module and run user program"
-	@echo "  make clean      - Remove all build artifacts"
+	@echo "  make all               - Build both kernel module and user program (default)"
+	@echo "  make module            - Build kernel module only"
+	@echo "  make user              - Build user program only"
+	@echo "  make build-multithread - Build multi-threaded test program"
+	@echo ""
+	@echo "Run Targets:"
+	@echo "  make install           - Install kernel module (requires root)"
+	@echo "  make uninstall         - Remove kernel module (requires root)"
+	@echo "  make test              - Install module and run user program"
+	@echo ""
+	@echo "Test Targets:"
+	@echo "  make unit              - Build and run function-level unit tests"
+	@echo "  make run-multithread   - Install module and test multi-thread program"
 	@echo ""
 	@echo "Code Quality Targets:"
-	@echo "  make check      - Run all static analysis checks"
-	@echo "  make checkpatch - Check kernel coding style with checkpatch.pl"
-	@echo "  make sparse     - Run sparse static analyzer"
-	@echo "  make cppcheck   - Run cppcheck static analyzer"
-	@echo "  make format     - Format code with clang-format"
-	@echo "  make format-check - Check if code is properly formatted (CI)"
+	@echo "  make check             - Run all static analysis checks"
+	@echo "  make checkpatch        - Check kernel coding style with checkpatch.pl"
+	@echo "  make sparse            - Run sparse static analyzer"
+	@echo "  make cppcheck          - Run cppcheck static analyzer"
+	@echo "  make format            - Format code with clang-format"
+	@echo "  make format-check      - Check if code is properly formatted (CI)"
 	@echo ""
-	@echo "  make help       - Show this help message"
+	@echo "Cleanup Targets:"
+	@echo "  make clean             - Remove all build artifacts"
+	@echo ""
+	@echo "  make help              - Show this help message"
 	@echo ""
 	@echo "Note: Building the kernel module requires kernel headers to be installed."

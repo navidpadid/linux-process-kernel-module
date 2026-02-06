@@ -120,8 +120,8 @@ int main(void)
 	assert(strcmp(size_buf, "1 MB") == 0);
 	assert(len > 0);
 
-	len =
-	    format_size_with_unit(5 * 1024 * 1024, size_buf, sizeof(size_buf));
+	len = format_size_with_unit(5 * 1024 * 1024, size_buf,
+				    sizeof(size_buf));
 	assert(strcmp(size_buf, "5 MB") == 0);
 
 	/* Test edge cases */
@@ -167,9 +167,9 @@ int main(void)
 	len = generate_region_visualization(&region, 25, 50, viz_buf,
 					    sizeof(viz_buf));
 	assert(len > 0);
-	assert(strstr(viz_buf, "CODE") != NULL);
-	assert(strstr(viz_buf, "1 MB") != NULL);
-	assert(strstr(viz_buf, "[=========================") != NULL);
+	assert(strstr(viz_buf, "CODE"));
+	assert(strstr(viz_buf, "1 MB"));
+	assert(strstr(viz_buf, "[========================="));
 
 	/* Test small region */
 	region.name = "DATA";
@@ -178,8 +178,8 @@ int main(void)
 	len = generate_region_visualization(&region, 5, 50, viz_buf,
 					    sizeof(viz_buf));
 	assert(len > 0);
-	assert(strstr(viz_buf, "DATA") != NULL);
-	assert(strstr(viz_buf, "512 B") != NULL);
+	assert(strstr(viz_buf, "DATA"));
+	assert(strstr(viz_buf, "512 B"));
 
 	/* Test non-existent region */
 	region.name = "BSS";
@@ -209,6 +209,7 @@ int main(void)
 
 	/* Test with small buffer */
 	char small_buf[6];
+
 	len = build_cpu_affinity_string(mask1, 8, small_buf, sizeof(small_buf));
 	assert(len >= 0); /* Should handle gracefully */
 	assert(strlen(small_buf) < sizeof(small_buf));
@@ -221,6 +222,189 @@ int main(void)
 	len = build_cpu_affinity_string(mask1, 8, buf, 3);
 	assert(len == 0);
 
+	/* Memory Pressure Statistics Tests */
+
+	/* calculate_rss_pages tests */
+	unsigned long rss;
+
+	/* Basic RSS calculation */
+	rss = calculate_rss_pages(1000, 2000, 500);
+	assert(rss == 3500);
+
+	/* Zero values */
+	rss = calculate_rss_pages(0, 0, 0);
+	assert(rss == 0);
+
+	/* Only anonymous pages */
+	rss = calculate_rss_pages(5000, 0, 0);
+	assert(rss == 5000);
+
+	/* Only file-backed pages */
+	rss = calculate_rss_pages(0, 8000, 0);
+	assert(rss == 8000);
+
+	/* Only shared memory */
+	rss = calculate_rss_pages(0, 0, 3000);
+	assert(rss == 3000);
+
+	/* Large values */
+	rss = calculate_rss_pages(1000000, 2000000, 500000);
+	assert(rss == 3500000);
+
+	/* pages_to_kb tests */
+	unsigned long kb;
+
+	/* Standard page conversions (assuming 4KB pages in userspace) */
+	kb = pages_to_kb(1);
+	assert(kb == 4); /* 1 page = 4 KB */
+
+	kb = pages_to_kb(256);
+	assert(kb == 1024); /* 256 pages = 1 MB = 1024 KB */
+
+	kb = pages_to_kb(0);
+	assert(kb == 0);
+
+	kb = pages_to_kb(1024);
+	assert(kb == 4096); /* 1024 pages = 4 MB */
+
+	/* Large value */
+	kb = pages_to_kb(262144); /* 1 GB worth of pages */
+	assert(kb == 1048576);
+
+	/* calculate_total_faults tests */
+	unsigned long total;
+
+	/* Basic fault calculation */
+	total = calculate_total_faults(10, 1000);
+	assert(total == 1010);
+
+	/* Zero faults */
+	total = calculate_total_faults(0, 0);
+	assert(total == 0);
+
+	/* Only major faults */
+	total = calculate_total_faults(500, 0);
+	assert(total == 500);
+
+	/* Only minor faults */
+	total = calculate_total_faults(0, 5000);
+	assert(total == 5000);
+
+	/* Large values */
+	total = calculate_total_faults(1000000, 5000000);
+	assert(total == 6000000);
+
+	/* is_valid_oom_score_adj tests */
+
+	/* Valid scores */
+	assert(is_valid_oom_score_adj(0) == 1);
+	assert(is_valid_oom_score_adj(-1000) == 1);
+	assert(is_valid_oom_score_adj(1000) == 1);
+	assert(is_valid_oom_score_adj(-500) == 1);
+	assert(is_valid_oom_score_adj(500) == 1);
+	assert(is_valid_oom_score_adj(1) == 1);
+	assert(is_valid_oom_score_adj(-1) == 1);
+
+	/* Invalid scores */
+	assert(is_valid_oom_score_adj(-1001) == 0);
+	assert(is_valid_oom_score_adj(1001) == 0);
+	assert(is_valid_oom_score_adj(-2000) == 0);
+	assert(is_valid_oom_score_adj(2000) == 0);
+
+	/* calculate_memory_usage_percent tests */
+	unsigned long percent;
+
+	/* Basic percentage calculations */
+	percent = calculate_memory_usage_percent(500, 1000);
+	assert(percent == 50); /* 50% */
+
+	percent = calculate_memory_usage_percent(250, 1000);
+	assert(percent == 25); /* 25% */
+
+	percent = calculate_memory_usage_percent(1000, 1000);
+	assert(percent == 100); /* 100% */
+
+	percent = calculate_memory_usage_percent(0, 1000);
+	assert(percent == 0); /* 0% */
+
+	/* Division by zero protection */
+	percent = calculate_memory_usage_percent(500, 0);
+	assert(percent == 0);
+
+	/* Over 100% (used more than total) */
+	percent = calculate_memory_usage_percent(1500, 1000);
+	assert(percent == 150);
+
+	/* Large values */
+	percent = calculate_memory_usage_percent(1024 * 1024, 2048 * 1024);
+	assert(percent == 50);
+
+	/* format_page_fault_stats tests */
+	char fault_buf[128];
+
+	/* Basic formatting */
+	len = format_page_fault_stats(10, 1000, fault_buf, sizeof(fault_buf));
+	assert(len > 0);
+	assert(strstr(fault_buf, "Major: 10"));
+	assert(strstr(fault_buf, "Minor: 1000"));
+	assert(strstr(fault_buf, "Total: 1010"));
+
+	/* Zero faults */
+	len = format_page_fault_stats(0, 0, fault_buf, sizeof(fault_buf));
+	assert(len > 0);
+	assert(strstr(fault_buf, "Major: 0"));
+	assert(strstr(fault_buf, "Total: 0"));
+
+	/* Large values */
+	len = format_page_fault_stats(500000, 2500000, fault_buf,
+				      sizeof(fault_buf));
+	assert(len > 0);
+	assert(strstr(fault_buf, "Total: 3000000"));
+
+	/* Buffer too small */
+	len = format_page_fault_stats(10, 100, fault_buf, 10);
+	assert(len >= 0); /* Should handle gracefully */
+
+	/* NULL buffer */
+	len = format_page_fault_stats(10, 100, NULL, 128);
+	assert(len == 0);
+
+	/* is_high_memory_pressure tests */
+	int high_pressure;
+
+	/* No swap usage - low pressure */
+	high_pressure = is_high_memory_pressure(10000, 0);
+	assert(high_pressure == 0);
+
+	/* Swap < 10% of RSS - low pressure */
+	high_pressure = is_high_memory_pressure(10000, 500); /* 5% */
+	assert(high_pressure == 0);
+
+	/* Swap = 10% of RSS - borderline */
+	high_pressure = is_high_memory_pressure(10000, 1000); /* 10% */
+	assert(high_pressure == 0);
+
+	/* Swap > 10% of RSS - high pressure */
+	high_pressure = is_high_memory_pressure(10000, 1001); /* 10.01% */
+	assert(high_pressure == 1);
+
+	high_pressure = is_high_memory_pressure(10000, 5000); /* 50% */
+	assert(high_pressure == 1);
+
+	/* Zero RSS but has swap - high pressure */
+	high_pressure = is_high_memory_pressure(0, 100);
+	assert(high_pressure == 1);
+
+	/* Zero RSS and zero swap - low pressure */
+	high_pressure = is_high_memory_pressure(0, 0);
+	assert(high_pressure == 0);
+
+	/* Large values */
+	high_pressure =
+		is_high_memory_pressure(1024 * 1024, 200 * 1024); /* ~19% */
+	assert(high_pressure == 1);
+
 	puts("elf_helpers tests passed");
+	puts("memory_pressure tests passed");
 	return 0;
 }

@@ -13,7 +13,7 @@
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/ubuntu/.ssh,type=bind,consistency=cached"
   ],
   "features": {},
-  "postCreateCommand": "bash -c 'echo \"Setting up development environment...\" && make --version && gcc --version && clang-format --version && echo \"Installing Git hooks...\" && mkdir -p .git/hooks && if [ -f .github/pre-commit.sh ]; then cp .github/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo \"✓ Git pre-commit hook installed\"; fi && echo \"✓ Dev environment ready!\"'",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [

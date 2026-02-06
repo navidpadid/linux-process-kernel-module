@@ -9,6 +9,7 @@
 ## Features
 
 - **Process Memory Layout**: Code, Data, BSS, Heap, and Stack addresses
+- **Memory Pressure Monitoring**: RSS, VSZ, swap usage, page faults (major/minor), and OOM score adjustment
 - **Visual Memory Map**: Proportional bar chart visualization of memory regions
 - **Thread Information**: List all threads with TID, state, CPU usage, priority, and CPU affinity
 - **CPU Usage Tracking**: Real-time CPU percentage calculation per process and thread
@@ -20,28 +21,43 @@
 ### Example Output
 
 ```
->> Enter process ID (or Ctrl+C to exit): 3115
+>> Enter process ID (or Ctrl+C to exit): 1219
 
 ================================================================================
                           PROCESS INFORMATION                                   
 ================================================================================
 Command line:   ./build/test_multithread 
-Process ID:      3115
+Process ID:      1219
 Name:            test_multithrea
-CPU Usage:       2.06%
+CPU Usage:       2.81%
+
+Memory Pressure Statistics:
+--------------------------------------------------------------------------------
+  RSS (Resident):  1408 KB
+    - Anonymous:   0 KB
+    - File-backed: 1408 KB
+    - Shared Mem:  0 KB
+  VSZ (Virtual):   35464 KB
+  Swap Usage:      0 KB
+  Page Faults:
+    - Major:       0
+    - Minor:       119
+    - Total:       119
+  OOM Score Adj:   0
+--------------------------------------------------------------------------------
 
 Memory Layout:
 --------------------------------------------------------------------------------
-  Code Section:    0x0000643f5b8f5000 - 0x0000643f5b8f5459
-  Data Section:    0x0000643f5b8f7d78 - 0x0000643f5b8f8010
-  BSS Section:     0x0000643f5b8f8010 - 0x0000643f87d3b000
-  Heap:            0x0000643f87d3b000 - 0x0000643f87d5c000
-  Stack:           0x00007ffcdf141220 - 0x00007ffcdf121000
-  ELF Base:        0x0000643f5b8f4000
+  Code Section:    0x0000603a34f21000 - 0x0000603a34f21459
+  Data Section:    0x0000603a34f23d78 - 0x0000603a34f24010
+  BSS Section:     0x0000603a34f24010 - 0x0000603a4a0b7000
+  Heap:            0x0000603a4a0b7000 - 0x0000603a4a0d8000
+  Stack:           0x00007fff7954ba80 - 0x00007fff7952b000
+  ELF Base:        0x0000603a34f20000
 
 Memory Layout Visualization:
 --------------------------------------------------------------------------------
-Low:  0x0000643f5b8f5000
+Low:  0x0000603a34f21000
 
 CODE  (1 KB)
       [=                                                 ]
@@ -49,16 +65,16 @@ CODE  (1 KB)
 DATA  (664 B)
       [=                                                 ]
 
-BSS   (708 MB)
+BSS   (337 MB)
       [================================================= ]
 
 HEAP  (132 KB)
       [=                                                 ]
 
-STACK (128 KB)
+STACK (130 KB)
       [=                                                 ]
 
-High: 0x00007ffcdf141220
+High: 0x00007fff7954ba80
 --------------------------------------------------------------------------------
 
 ================================================================================
@@ -66,12 +82,13 @@ High: 0x00007ffcdf141220
 ================================================================================
 TID    NAME             CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY
 -----  ---------------  -------  -----  --------  ----  ----------------
-3115   test_multithrea     2.06   S         0         0  0,1
-3117   test_multithrea     0.32   S         0         0  0,1
-3118   test_multithrea     0.29   S         0         0  0,1
-3119   test_multithrea     0.26   S         0         0  0,1
-3120   test_multithrea     0.14   S         0         0  0,1
+1219   test_multithrea     2.81   S         0         0  0,1
+1221   test_multithrea     0.42   S         0         0  0,1
+1222   test_multithrea     0.14   S         0         0  0,1
+1223   test_multithrea     0.22   S         0         0  0,1
+1224   test_multithrea     0.31   S         0         0  0,1
 --------------------------------------------------------------------------------
+Total threads: 5
 ```
 
 ## Quick Start
@@ -148,23 +165,31 @@ For maximum safety, test the kernel module in an isolated QEMU virtual machine t
 ## Makefile Targets
 
 ```bash
-make all              # Build kernel module and user program
-make module           # Build kernel module only
-make user             # Build user program only
-make test-multithread # Build multi-threaded test program
-make install          # Install kernel module (requires root)
-make uninstall        # Remove kernel module
-make unit             # Run unit tests (no kernel required)
-make test             # Install module and run user program
+Build Targets:
+  make all               - Build both kernel module and user program (default)
+  make module            - Build kernel module only
+  make user              - Build user program only
+  make build-multithread - Build multi-threaded test program
 
-make format           # Format all source files
-make format-check     # Check formatting (CI-friendly)
-make check            # Run all static analysis
-make checkpatch        # Check kernel coding style
-make sparse           # Run sparse static analyzer
-make cppcheck         # Run cppcheck static analyzer
-make clean            # Remove build artifacts
-make help             # Show help message
+Run Targets:
+  make install           - Install kernel module (requires root)
+  make uninstall         - Remove kernel module (requires root)
+  make test              - Install module and run user program
+
+Test Targets:
+  make unit              - Build and run function-level unit tests
+  make run-multithread   - Install module and test multi-thread program
+
+Code Quality Targets:
+  make check             - Run all static analysis checks
+  make checkpatch        - Check kernel coding style with checkpatch.pl
+  make sparse            - Run sparse static analyzer
+  make cppcheck          - Run cppcheck static analyzer
+  make format            - Format code with clang-format
+  make format-check      - Check if code is properly formatted (CI)
+
+Cleanup Targets:
+  make clean             - Remove all build artifacts
 ```
 
 ## Testing
@@ -174,6 +199,12 @@ make help             # Show help message
 make unit
 ```
 Runs pure function tests without kernel dependencies.
+
+### Multi-threaded Module Test
+```bash
+make run-multithread
+```
+Builds the multi-threaded test program, installs the module, and validates output via the user program.
 
 ### QEMU Testing (Safe Kernel Testing)
 ```bash

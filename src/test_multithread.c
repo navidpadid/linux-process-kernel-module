@@ -17,13 +17,12 @@ void *worker_thread(void *arg)
 	/* Do some work to show CPU usage and keep thread alive */
 	for (i = 0; i < 1000000; i++) {
 		/* Light CPU work */
-		volatile long tmp = i * i;
+		long tmp = i * i;
 		(void)tmp;
 
 		/* Sleep occasionally to avoid 100% CPU */
-		if (i % 10000 == 0) {
+		if (i % 10000 == 0)
 			usleep(100000); /* Sleep 100ms */
-		}
 	}
 
 	printf("Thread %ld finished\n", thread_id);
@@ -41,8 +40,8 @@ int main(void)
 
 	/* Create worker threads */
 	for (i = 0; i < NUM_THREADS; i++) {
-		int rc =
-		    pthread_create(&threads[i], NULL, worker_thread, (void *)i);
+		int rc = pthread_create(&threads[i], NULL, worker_thread,
+					(void *)i);
 		if (rc) {
 			fprintf(stderr, "Error creating thread %ld: %d\n", i,
 				rc);
@@ -51,12 +50,11 @@ int main(void)
 	}
 
 	/* Wait for threads to complete */
-	for (i = 0; i < NUM_THREADS; i++) {
+	for (i = 0; i < NUM_THREADS; i++)
 		pthread_join(threads[i], NULL);
-	}
 
 	printf("\nAll threads completed\n");
-	printf("Total threads (main + workers): %d\n", NUM_THREADS + 1);
+	printf("Total threads (%s + workers): %d\n", __func__, NUM_THREADS + 1);
 
 	return 0;
 }
