@@ -40,59 +40,7 @@ You can manually trigger a release from the GitHub Actions tab:
 3. Select the branch (usually `main`)
 4. Choose the version bump type (major/minor/patch)
 5. Click **Run workflow**
-## Pull Request Template and Release Notes
 
-When creating a pull request, use the provided template (`.github/PULL_REQUEST_TEMPLATE.md`) to structure your PR description. The template includes a dedicated **Release Notes** section that should contain clean, user-facing descriptions of changes.
-
-### Best Practices for Release Notes
-
-**DO:**
-- Write clear, concise descriptions of changes
-- Group related changes under appropriate headings (New Features, Improvements, Bug Fixes, Documentation)
-- Focus on what changed from a user's perspective
-- Use proper markdown formatting
-
-**DON'T:**
-- Paste command output or terminal logs
-- Include build/test output (e.g., `make` output, test results)
-- Add system messages (e.g., kernel headers installation, package manager output)
-- Copy large blocks of debugging information
-
-### How Release Notes Are Generated
-
-The release workflow extracts release notes from your PR as follows:
-
-1. **First Priority**: If your PR has a dedicated `## Release Notes` section, only that section will be used
-2. **Fallback**: If no Release Notes section exists, the entire PR body is used with automatic filtering to remove:
-   - Command output patterns (apt/dpkg messages, make output, etc.)
-   - System setup messages (kernel headers, git hooks, etc.)
-   - Separator lines and QEMU test output
-   - Common PR template section headers (Description, Testing, Checklist)
-
-### Example Good Release Notes
-
-```markdown
-## Release Notes
-
-### Memory Pressure Statistics Feature
-
-- Added memory pressure statistics (RSS, VSZ, swap, page faults, OOM score adjustment) to process information output
-- Updated documentation to explain new memory pressure fields
-- Added unit tests for memory pressure calculation helpers
-
-### Development Environment Improvements
-
-- Created dedicated post-create script for dev container setup
-- Automated kernel header installation for the running kernel version
-- Added pre-commit Git hooks for code quality checks
-
-### Code Quality
-
-- Updated clang-format configuration for better alignment with checkpatch
-- Fixed formatting conflicts between make format and make checkpatch
-```
-
-This ensures clean, professional release notes without clutter from command outputs or system messages.
 ## What Happens During a Release
 
 1. **Version Calculation**: The workflow reads the latest git tag and calculates the new version based on the bump type
