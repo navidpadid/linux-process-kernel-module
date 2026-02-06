@@ -32,6 +32,10 @@ make cppcheck        # General C/C++ analysis
 **Purpose**: Kernel coding style compliance  
 **Source**: Official Linux kernel scripts  
 
+**Note**:
+- checkpatch.pl requires kernel headers for the running kernel.
+- The dev container post-create script installs `linux-headers-$(uname -r)` to avoid version mismatches.
+
 **Checks**:
 - Indentation and spacing rules
 - Line length limits (80 columns preferred)

@@ -9,7 +9,7 @@ make unit
 ```
 
 This builds and runs:
-- `src/elf_det_tests.c` – verifies `compute_usage_permyriad()`, `compute_bss_range()`, `compute_heap_range()`, `is_address_in_range()`, `get_thread_state_char()`, and `build_cpu_affinity_string()`
+- `src/elf_det_tests.c` – verifies `compute_usage_permyriad()`, `compute_bss_range()`, `compute_heap_range()`, `is_address_in_range()`, `get_thread_state_char()`, `build_cpu_affinity_string()`, and memory-pressure helpers
 - `src/proc_elf_ctrl_tests.c` – verifies `build_proc_path()` with and without `ELF_DET_PROC_DIR`
 
 Artifacts are created under `build/`.
@@ -53,6 +53,9 @@ cd kernel_module
 make clean && make all
 sudo make install
 ./build/proc_elf_ctrl
+
+# Multi-threaded module test
+make run-multithread
 
 # Check kernel logs
 sudo dmesg | tail -20
@@ -128,9 +131,10 @@ ls -la /proc/elf_det/
 ./build/proc_elf_ctrl $$
 
 # Test with multi-threaded process
-# Start a process with multiple threads (e.g., Firefox, Chrome)
-ps aux | grep firefox  # Get PID
-./build/proc_elf_ctrl <PID>
+# Start the bundled multi-threaded test program
+make build-multithread
+./build/test_multithread &
+./build/proc_elf_ctrl $!
 
 # Manually check thread info
 echo "<PID>" | sudo tee /proc/elf_det/pid

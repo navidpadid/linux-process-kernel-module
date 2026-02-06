@@ -26,6 +26,21 @@ The kernel module creates entries in `/proc/elf_det/`:
 | **Stack** | `start_stack` to `stack_end` | Stack region (grows downward) |
 | **ELF Base** | First VMA start | Base address of ELF binary (for PIE) |
 
+### Memory Pressure Statistics
+
+The process information output includes a memory pressure section with:
+
+| Field | Description | Source |
+|-------|-------------|--------|
+| **RSS (Resident)** | Total physical memory used | Sum of anonymous, file-backed, and shared pages |
+| **Anonymous** | Private memory pages | `MM_ANONPAGES` |
+| **File-backed** | Mapped file pages | `MM_FILEPAGES` |
+| **Shared Mem** | Shared memory pages | `MM_SHMEMPAGES` |
+| **VSZ (Virtual)** | Total virtual memory | `mm->total_vm` |
+| **Swap Usage** | Pages swapped out | `MM_SWAPENTS` |
+| **Page Faults** | Major and minor faults | `task->maj_flt`, `task->min_flt` |
+| **OOM Score Adj** | OOM killer adjustment | `task->signal->oom_score_adj` |
+
 ### Important Notes and Limitations
 
 #### 1. BSS May Be Zero-Length
@@ -96,18 +111,13 @@ Path building with environment override:
 ## Output Format
 
 ### Process Information (`/proc/elf_det/det`)
-```
-PID     NAME    CPU(%)  START_CODE      END_CODE        START_DATA      END_DATA        
-BSS_START       BSS_END         HEAP_START      HEAP_END        STACK_START     
-STACK_END       ELF_BASE
-```
 
-Example:
-```
-01234   bash    0.50    0x0000563a1234  0x0000563a5678  0x0000563a9abc  
-0x0000563adef0  0x0000563adef0  0x0000563adef0  0x0000563b0000  
-0x0000563b8000  0x00007ffd12345000  0x00007ffd12340000  0x0000563a1000
-```
+The output is human-readable and grouped into sections:
+
+- Basic process info (PID, name, CPU usage)
+- Memory pressure statistics (RSS, VSZ, swap, faults, OOM adjustment)
+- Memory layout (code/data/BSS/heap/stack/ELF base)
+- Memory layout visualization
 
 ### Thread Information (`/proc/elf_det/threads`)
 ```

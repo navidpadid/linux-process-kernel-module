@@ -20,6 +20,11 @@ When merging a pull request to `main`, add one of these labels to trigger an aut
 - `release:minor` - Bumps minor version (e.g., 1.3.0 → 1.4.0)
 - `release:patch` - Bumps patch version (e.g., 1.3.0 → 1.3.1)
 
+Use **only one** of the release labels above per PR. If more than one is present, the workflow will fail.
+
+To explicitly skip releasing on a merged PR, add:
+- `not-a-release` - Prevents release creation, even if a release label is present
+
 The workflow will automatically:
 1. Determine the new version number
 2. Update the changelog in README.md

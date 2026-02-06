@@ -54,12 +54,9 @@ static void print_process_info(const char *pid_str)
 
 	/* Read and display process info */
 	printf("\n");
-	printf("==============================================================="
-	       "=================\n");
-	printf("                          PROCESS INFORMATION                  "
-	       "                 \n");
-	printf("==============================================================="
-	       "=================\n");
+	puts("===============================================================");
+	puts("PROCESS INFORMATION");
+	puts("===============================================================");
 	print_cmdline(pid_str);
 	det_path = build_proc_path("det");
 	fp = fopen(det_path, "r");
@@ -75,12 +72,9 @@ static void print_process_info(const char *pid_str)
 
 	/* Read and display thread info */
 	printf("\n");
-	printf("==============================================================="
-	       "=================\n");
-	printf("                          THREAD INFORMATION                   "
-	       "                 \n");
-	printf("==============================================================="
-	       "=================\n");
+	puts("===============================================================");
+	puts("THREAD INFORMATION");
+	puts("===============================================================");
 	threads_path = build_proc_path("threads");
 	fp = fopen(threads_path, "r");
 	if (!fp) {
@@ -92,8 +86,7 @@ static void print_process_info(const char *pid_str)
 		printf("%s", buff);
 	fclose(fp);
 	free(threads_path);
-	printf("==============================================================="
-	       "=================\n");
+	puts("===============================================================");
 }
 
 int main(int argc, char **argv)

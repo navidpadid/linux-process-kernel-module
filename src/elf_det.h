@@ -7,7 +7,8 @@ typedef u64 eh_u64;
 #else
 #include <stdint.h>
 #include <stdio.h>
-typedef uint64_t eh_u64;
+typedef unsigned long long u64;
+typedef u64 eh_u64;
 #endif
 
 /* Compute CPU usage permyriad (percent * 100) from total_ns and delta_ns */
@@ -46,7 +47,8 @@ static inline int compute_bss_range(unsigned long end_data,
  * To see full heap usage, you would need to parse /proc/pid/maps for
  * anonymous mappings marked as [heap] or unnamed mmap regions.
  */
-static inline int compute_heap_range(unsigned long start_brk, unsigned long brk,
+static inline int compute_heap_range(unsigned long start_brk,
+				     unsigned long brk,
 				     unsigned long *out_start,
 				     unsigned long *out_end)
 {
@@ -119,8 +121,10 @@ static inline char get_thread_state_char(unsigned long state)
  *   out_buf: output buffer for the affinity string
  *   buf_size: size of output buffer
  */
-static inline int build_cpu_affinity_string(const int *cpu_mask, int max_cpus,
-					    char *out_buf, int buf_size)
+static inline int build_cpu_affinity_string(const int *cpu_mask,
+					    int max_cpus,
+					    char *out_buf,
+					    int buf_size)
 {
 	int i, len = 0;
 	int has_cpu = 0;
@@ -131,8 +135,8 @@ static inline int build_cpu_affinity_string(const int *cpu_mask, int max_cpus,
 	for (i = 0; i < max_cpus && len < buf_size - 2; i++) {
 		if (cpu_mask[i]) {
 			has_cpu = 1;
-			len +=
-			    snprintf(out_buf + len, buf_size - len, "%d,", i);
+			len += snprintf(out_buf + len, buf_size - len, "%d,",
+					i);
 		}
 	}
 
@@ -155,8 +159,8 @@ struct memory_region {
 /* Format size with appropriate unit (B, KB, MB)
  * Returns number of characters written (excluding null terminator)
  */
-static inline int format_size_with_unit(unsigned long size, char *out_buf,
-					int buf_size)
+static inline int
+format_size_with_unit(unsigned long size, char *out_buf, int buf_size)
 {
 	if (!out_buf || buf_size < 10)
 		return 0;
@@ -175,7 +179,8 @@ static inline int format_size_with_unit(unsigned long size, char *out_buf,
  * Returns the proportional width
  */
 static inline int calculate_bar_width(unsigned long region_size,
-				      unsigned long total_size, int bar_width)
+				      unsigned long total_size,
+				      int bar_width)
 {
 	int width;
 
@@ -203,8 +208,11 @@ static inline int calculate_bar_width(unsigned long region_size,
  *   buf_size: size of output buffer
  */
 static inline int
-generate_region_visualization(const struct memory_region *region, int width,
-			      int bar_width, char *out_buf, int buf_size)
+generate_region_visualization(const struct memory_region *region,
+			      int width,
+			      int bar_width,
+			      char *out_buf,
+			      int buf_size)
 {
 	char size_str[32];
 	int len = 0;
@@ -235,4 +243,90 @@ generate_region_visualization(const struct memory_region *region, int width,
 	len += snprintf(out_buf + len, buf_size - len, "]\n\n");
 
 	return len;
+}
+
+/* Memory Pressure Statistics Helper Functions */
+
+/* Calculate RSS (Resident Set Size) from component pages
+ * RSS = Anonymous pages + File-backed pages + Shared memory pages
+ * Returns total RSS in pages
+ */
+static inline unsigned long calculate_rss_pages(unsigned long anon_pages,
+						unsigned long file_pages,
+						unsigned long shmem_pages)
+{
+	return anon_pages + file_pages + shmem_pages;
+}
+
+/* Convert pages to kilobytes
+ * Uses PAGE_SHIFT (typically 12 for 4KB pages)
+ * Formula: pages << (PAGE_SHIFT - 10) = pages * (4096 / 1024)
+ * For testing without PAGE_SHIFT, use pages * 4
+ */
+static inline unsigned long pages_to_kb(unsigned long pages)
+{
+#ifdef __KERNEL__
+	return pages << (PAGE_SHIFT - 10);
+#else
+	/* Assume 4KB pages for user-space testing */
+	return pages * 4;
+#endif
+}
+
+/* Calculate total page faults
+ * Returns sum of major and minor page faults
+ */
+static inline unsigned long calculate_total_faults(unsigned long major_faults,
+						   unsigned long minor_faults)
+{
+	return major_faults + minor_faults;
+}
+
+/* Validate OOM score adjustment value
+ * Valid range: -1000 to 1000
+ * Returns 1 if valid, 0 if invalid
+ */
+static inline int is_valid_oom_score_adj(long oom_score_adj)
+{
+	return (oom_score_adj >= -1000 && oom_score_adj <= 1000);
+}
+
+/* Calculate memory usage percentage
+ * Returns (used_kb * 100) / total_kb
+ * Returns 0 if total_kb is 0 to avoid division by zero
+ */
+static inline unsigned long
+calculate_memory_usage_percent(unsigned long used_kb, unsigned long total_kb)
+{
+	if (total_kb == 0)
+		return 0;
+	return (used_kb * 100) / total_kb;
+}
+
+/* Format page fault statistics string
+ * Returns number of characters written
+ */
+static inline int format_page_fault_stats(unsigned long major_faults,
+					  unsigned long minor_faults,
+					  char *out_buf,
+					  int buf_size)
+{
+	if (!out_buf || buf_size < 50)
+		return 0;
+
+	return snprintf(out_buf, buf_size, "Major: %lu, Minor: %lu, Total: %lu",
+			major_faults, minor_faults,
+			major_faults + minor_faults);
+}
+
+/* Check if memory pressure is high based on swap usage
+ * Returns 1 if swap usage indicates high memory pressure, 0 otherwise
+ * Threshold: swap > 10% of RSS indicates pressure
+ */
+static inline int is_high_memory_pressure(unsigned long rss_kb,
+					  unsigned long swap_kb)
+{
+	if (rss_kb == 0)
+		return (swap_kb > 0);
+	return (swap_kb * 10 > rss_kb); /* swap > 10% of RSS */
 }

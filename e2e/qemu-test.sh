@@ -27,7 +27,7 @@ echo "1. Building kernel module locally..."
 cd "$PROJECT_ROOT"
 make clean
 make all
-make test-multithread
+make build-multithread
 
 echo ""
 echo "2. Copying files to QEMU VM..."
@@ -56,7 +56,12 @@ echo "Expected files: det, pid, threads"
 echo ""
 echo "=== Testing Process Information (PID: $$) ==="
 echo "$$" | sudo tee /proc/elf_det/pid > /dev/null
-sudo cat /proc/elf_det/det
+PROC_OUT=$(sudo cat /proc/elf_det/det)
+echo "$PROC_OUT"
+if ! echo "$PROC_OUT" | grep -q "Memory Pressure Statistics"; then
+    echo "[FAIL] Memory pressure stats missing for PID $$"
+    exit 1
+fi
 
 echo ""
 echo "=== Testing Thread Information (PID: $$) ==="
@@ -66,7 +71,12 @@ echo ""
 echo "=== Testing with PID 1 (init/systemd) ==="
 echo "1" | sudo tee /proc/elf_det/pid > /dev/null
 echo "Process info:"
-sudo cat /proc/elf_det/det
+PROC_OUT=$(sudo cat /proc/elf_det/det)
+echo "$PROC_OUT"
+if ! echo "$PROC_OUT" | grep -q "Memory Pressure Statistics"; then
+    echo "[FAIL] Memory pressure stats missing for PID 1"
+    exit 1
+fi
 echo ""
 echo "Thread info:"
 sudo cat /proc/elf_det/threads
@@ -91,7 +101,12 @@ echo "Testing thread detection with multi-threaded process:"
 echo "$MULTITHREAD_PID" | sudo tee /proc/elf_det/pid > /dev/null
 echo ""
 echo "Process info:"
-sudo cat /proc/elf_det/det
+PROC_OUT=$(sudo cat /proc/elf_det/det)
+echo "$PROC_OUT"
+if ! echo "$PROC_OUT" | grep -q "Memory Pressure Statistics"; then
+    echo "[FAIL] Memory pressure stats missing for PID $MULTITHREAD_PID"
+    exit 1
+fi
 echo ""
 echo "Thread info (should show 5 threads: 1 main + 4 workers):"
 sudo cat /proc/elf_det/threads
