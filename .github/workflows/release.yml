@@ -131,78 +131,11 @@ jobs:
           
           # Create release notes
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Use PR body for release notes, but filter out command output
-            PR_BODY=$(cat << 'EOF'
-          ${{ github.event.pull_request.body }}
-          EOF
-          )
-            
-            # Try to extract a "Release Notes" section if it exists
-            RELEASE_NOTES_SECTION=$(echo "$PR_BODY" | awk '
-              BEGIN { in_section = 0; found = 0 }
-              /^##+ Release Notes/ { in_section = 1; found = 1; next }
-              in_section && /^##+ / { in_section = 0 }
-              in_section { print }
-              END { exit !found }
-            ')
-            
-            if [ $? -eq 0 ] && [ -n "$RELEASE_NOTES_SECTION" ]; then
-              # Use the dedicated Release Notes section
-              FILTERED_BODY="$RELEASE_NOTES_SECTION"
-            else
-              # Fall back to filtering the entire PR body
-              FILTERED_BODY=$(echo "$PR_BODY" | awk '
-                BEGIN { in_code_block = 0; skip_line = 0 }
-                
-                # Detect code blocks
-                /^```/ { in_code_block = !in_code_block; print; next }
-                
-                # If in code block, keep everything
-                in_code_block { print; next }
-                
-                # Skip lines that look like command output/system messages
-                /^={3,}$/ { next }  # Skip separator lines (===...)
-                /^Reading package lists/ { skip_line = 1; next }
-                /^Building dependency tree/ { skip_line = 1; next }
-                /^Reading state information/ { skip_line = 1; next }
-                /linux-headers.*is already the newest version/ { skip_line = 1; next }
-                /set to manually installed/ { skip_line = 1; next }
-                /^0 upgraded, 0 newly installed/ { skip_line = 1; next }
-                /^✓ Installed linux-headers/ { skip_line = 1; next }
-                /^ERROR: QEMU VM is not running/ { skip_line = 1; next }
-                /^Start the VM first with:/ { skip_line = 1; next }
-                /^Testing Kernel Module in QEMU/ { skip_line = 1; next }
-                /^Setting up development environment/ { skip_line = 1; next }
-                /^Build tools:/ { skip_line = 1; next }
-                /^GNU Make [0-9]/ { skip_line = 1; next }
-                /^gcc \(Ubuntu/ { skip_line = 1; next }
-                /^Ubuntu clang-format version/ { skip_line = 1; next }
-                /^Installing kernel headers/ { skip_line = 1; next }
-                /^Installing Git hooks/ { skip_line = 1; next }
-                /^✓ Git pre-commit hook installed/ { skip_line = 1; next }
-                /^✓ Dev environment ready/ { skip_line = 1; next }
-                /^Available kernel headers:/ { skip_line = 1; next }
-                /^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+-/ { skip_line = 1; next }  # kernel version patterns
-                
-                # Skip common PR template sections that should not be in release notes
-                /^##+ Description/ { skip_line = 1; next }
-                /^##+ Changes[[:space:]]*$/ { skip_line = 1; next }
-                /^##+ Testing/ { skip_line = 1; next }
-                /^##+ Checklist/ { skip_line = 1; next }
-                
-                # Remove large blocks of text in parentheses that span multiple lines
-                # (likely captured command output)
-                { gsub(/\(={3,}[^)]*Testing Kernel Module[^)]*\)/, ""); }
-                
-                # Print non-skipped lines
-                { if (!skip_line) print; skip_line = 0 }
-              ')
-            fi
-            
+            # Use PR body for release notes
             {
               echo "## ${{ github.event.pull_request.title }}"
               echo ""
-              echo "$FILTERED_BODY"
+              echo "${{ github.event.pull_request.body }}"
               echo ""
               echo "---"
               echo "**Version**: $VERSION | **Type**: $BUMP_TYPE"
