@@ -330,3 +330,80 @@ static inline int is_high_memory_pressure(unsigned long rss_kb,
 		return (swap_kb > 0);
 	return (swap_kb * 10 > rss_kb); /* swap > 10% of RSS */
 }
+
+/* Convert socket family value to string representation
+ * Common values: AF_INET (2), AF_INET6 (10), AF_UNIX (1), AF_NETLINK (16)
+ * Returns string representation or "UNKNOWN" for unrecognized families
+ * For testing: use numeric values (1, 2, 10, 16)
+ */
+static inline const char *socket_family_to_string(unsigned short family)
+{
+	switch (family) {
+	case 1: /* AF_UNIX */
+		return "AF_UNIX";
+	case 2: /* AF_INET */
+		return "AF_INET";
+	case 10: /* AF_INET6 */
+		return "AF_INET6";
+	case 16: /* AF_NETLINK */
+		return "AF_NETLINK";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+/* Convert socket type value to string representation
+ * Common values: SOCK_STREAM (1), SOCK_DGRAM (2), SOCK_RAW (3)
+ * Returns string representation or "UNKNOWN" for unrecognized types
+ * For testing: use numeric values (1, 2, 3)
+ */
+static inline const char *socket_type_to_string(unsigned short type)
+{
+	switch (type) {
+	case 1: /* SOCK_STREAM */
+		return "STREAM";
+	case 2: /* SOCK_DGRAM */
+		return "DGRAM";
+	case 3: /* SOCK_RAW */
+		return "RAW";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+/* Convert TCP socket state value to string representation
+ * TCP state values: 1-12 representing connection states
+ * Returns string representation or "UNKNOWN" for invalid states
+ * For testing: use numeric values (1-12)
+ */
+static inline const char *socket_state_to_string(unsigned char state)
+{
+	switch (state) {
+	case 1: /* TCP_ESTABLISHED */
+		return "ESTABLISHED";
+	case 2: /* TCP_SYN_SENT */
+		return "SYN_SENT";
+	case 3: /* TCP_SYN_RECV */
+		return "SYN_RECV";
+	case 4: /* TCP_FIN_WAIT1 */
+		return "FIN_WAIT1";
+	case 5: /* TCP_FIN_WAIT2 */
+		return "FIN_WAIT2";
+	case 6: /* TCP_TIME_WAIT */
+		return "TIME_WAIT";
+	case 7: /* TCP_CLOSE */
+		return "CLOSE";
+	case 8: /* TCP_CLOSE_WAIT */
+		return "CLOSE_WAIT";
+	case 9: /* TCP_LAST_ACK */
+		return "LAST_ACK";
+	case 10: /* TCP_LISTEN */
+		return "LISTEN";
+	case 11: /* TCP_CLOSING */
+		return "CLOSING";
+	case 12: /* TCP_NEW_SYN_RECV */
+		return "NEW_SYN_RECV";
+	default:
+		return "UNKNOWN";
+	}
+}

@@ -41,6 +41,21 @@ The process information output includes a memory pressure section with:
 | **Page Faults** | Major and minor faults | `task->maj_flt`, `task->min_flt` |
 | **OOM Score Adj** | OOM killer adjustment | `task->signal->oom_score_adj` |
 
+### Open Sockets
+
+The process information output includes an open sockets section that lists all open socket file descriptors:
+
+| Field | Description | Details |
+|-------|-------------|---------|
+| **FD** | File descriptor number | File descriptor index in process fd table |
+| **Family** | Socket address family | AF_INET, AF_INET6, AF_UNIX, AF_NETLINK, etc. |
+| **Type** | Socket type | STREAM (TCP), DGRAM (UDP), RAW |
+| **State** | Connection state (TCP) | ESTABLISHED, LISTEN, CLOSE_WAIT, etc. |
+| **Local** | Local address and port | IPv4 (e.g., 127.0.0.1:8080) or IPv6 format |
+| **Remote** | Remote address and port | Destination address for connected sockets |
+
+The socket listing provides visibility into network connections and IPC sockets in use by the process. For processes with no open sockets, displays "No open sockets".
+
 ### Important Notes and Limitations
 
 #### 1. BSS May Be Zero-Length
@@ -118,6 +133,7 @@ The output is human-readable and grouped into sections:
 - Memory pressure statistics (RSS, VSZ, swap, faults, OOM adjustment)
 - Memory layout (code/data/BSS/heap/stack/ELF base)
 - Memory layout visualization
+- Open sockets (file descriptors, address families, connection states)
 
 ### Thread Information (`/proc/elf_det/threads`)
 ```

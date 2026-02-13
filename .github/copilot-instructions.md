@@ -122,6 +122,7 @@ When adding new helper functions to headers:
 4. Update `e2e/qemu-test.sh` to validate output
 5. Update `docs/TECHNICAL.md` with new field documentation
 6. Update `docs/TESTING.md` with test coverage info
+7. Update `README.md` to reflect new features in the features list and example output
 
 ### Memory Pressure Statistics
 

@@ -62,6 +62,10 @@ if ! echo "$PROC_OUT" | grep -q "Memory Pressure Statistics"; then
     echo "[FAIL] Memory pressure stats missing for PID $$"
     exit 1
 fi
+if ! echo "$PROC_OUT" | grep -q "Open Sockets"; then
+    echo "[FAIL] Open sockets section missing for PID $$"
+    exit 1
+fi
 
 echo ""
 echo "=== Testing Thread Information (PID: $$) ==="
@@ -75,6 +79,10 @@ PROC_OUT=$(sudo cat /proc/elf_det/det)
 echo "$PROC_OUT"
 if ! echo "$PROC_OUT" | grep -q "Memory Pressure Statistics"; then
     echo "[FAIL] Memory pressure stats missing for PID 1"
+    exit 1
+fi
+if ! echo "$PROC_OUT" | grep -q "Open Sockets"; then
+    echo "[FAIL] Open sockets section missing for PID 1"
     exit 1
 fi
 echo ""
@@ -105,6 +113,10 @@ PROC_OUT=$(sudo cat /proc/elf_det/det)
 echo "$PROC_OUT"
 if ! echo "$PROC_OUT" | grep -q "Memory Pressure Statistics"; then
     echo "[FAIL] Memory pressure stats missing for PID $MULTITHREAD_PID"
+    exit 1
+fi
+if ! echo "$PROC_OUT" | grep -q "Open Sockets"; then
+    echo "[FAIL] Open sockets section missing for PID $MULTITHREAD_PID"
     exit 1
 fi
 echo ""
