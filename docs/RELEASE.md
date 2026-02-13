@@ -46,8 +46,26 @@ You can manually trigger a release from the GitHub Actions tab:
 1. **Version Calculation**: The workflow reads the latest git tag and calculates the new version based on the bump type
 2. **Changelog Update**: Adds an entry to the README.md changelog section
 3. **Git Tag Creation**: Creates an annotated git tag (e.g., `v1.4.0`)
-4. **GitHub Release**: Creates a release on GitHub with auto-generated release notes
-5. **Version Commit**: Pushes the updated README.md back to the repository
+4. **Binary Build**: Builds release binaries for amd64 architecture:
+   - `elf_det.ko` - Kernel module
+   - `proc_elf_ctrl` - User-space control program
+   - `test_multithread` - Multi-threaded test program
+   - `elf_det-{version}-amd64.tar.gz` - All binaries packaged together
+5. **GitHub Release**: Creates a release on GitHub with auto-generated release notes and binary artifacts
+6. **Version Commit**: Pushes the updated README.md back to the repository
+
+## Release Artifacts
+
+Each release includes pre-built binaries for amd64/x86_64 architecture:
+
+- **Individual files**:
+  - `elf_det.ko` - The kernel module (load with `insmod`)
+  - `proc_elf_ctrl` - The control program for querying process information
+  - `test_multithread` - Multi-threaded test application
+
+- **Tarball**: `elf_det-{version}-amd64.tar.gz` containing all binaries
+
+**Note**: The kernel module is compiled against the Ubuntu 24.04 kernel. You may need to rebuild from source for other kernel versions.
 
 ## Version Numbering
 
@@ -91,6 +109,29 @@ git describe --tags --abbrev=0
 # Or check the README.md changelog
 grep "### Version" README.md | head -n1
 ```
+
+## Building Release Binaries Locally
+
+To build the same binaries that will be included in a release:
+
+```bash
+# Clean and build all release binaries
+make release
+
+# Binaries will be in build/ directory:
+# - build/elf_det.ko
+# - build/proc_elf_ctrl
+# - build/test_multithread
+
+# Create a tarball (optional)
+cd build
+tar -czf elf_det-dev-amd64.tar.gz *.ko proc_elf_ctrl test_multithread
+```
+
+The `make release` target:
+- Performs a clean build
+- Strips debugging symbols from user-space programs (smaller file size)
+- Builds all components (module + user programs)
 
 ## Example Workflows
 

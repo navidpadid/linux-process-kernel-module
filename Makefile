@@ -19,7 +19,7 @@ SRC_DIR := src
 # Build directory for user program
 BUILD_DIR := build
 
-.PHONY: all clean module user install uninstall test help unit check format checkpatch sparse cppcheck build-multithread run-multithread
+.PHONY: all clean module user install uninstall test help unit check format checkpatch sparse cppcheck build-multithread run-multithread release
 
 # Default target
 all: module user
@@ -97,6 +97,25 @@ clean:
 	rm -f $(SRC_DIR)/Module.symvers $(SRC_DIR)/modules.order
 	rm -rf $(SRC_DIR)/.tmp_versions
 	@echo "Clean complete!"
+
+# Build release binaries (for distribution)
+release: clean
+	@echo "Building release binaries for amd64..."
+	@mkdir -p $(BUILD_DIR)
+	@# Build kernel module
+	$(MAKE) module
+	@# Build user programs
+	$(MAKE) user
+	$(MAKE) build-multithread
+	@# Strip binaries to reduce size
+	strip $(BUILD_DIR)/$(USER_PROG)
+	strip $(BUILD_DIR)/test_multithread
+	@echo ""
+	@echo "Release binaries built successfully!"
+	@echo "Artifacts:"
+	@ls -lh $(BUILD_DIR)/*.ko $(BUILD_DIR)/$(USER_PROG) $(BUILD_DIR)/test_multithread 2>/dev/null
+	@echo ""
+	@echo "Ready for distribution in: $(BUILD_DIR)/"
 
 # Static Analysis and Code Quality Checks
 
@@ -193,6 +212,7 @@ help:
 	@echo "  make module            - Build kernel module only"
 	@echo "  make user              - Build user program only"
 	@echo "  make build-multithread - Build multi-threaded test program"
+	@echo "  make release           - Build all binaries for release (clean build + stripped)"
 	@echo ""
 	@echo "Run Targets:"
 	@echo "  make install           - Install kernel module (requires root)"
