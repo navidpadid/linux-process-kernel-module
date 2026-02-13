@@ -63,7 +63,8 @@ int main(void)
 		if (bind(tcp_sock, (struct sockaddr *)&tcp_addr,
 			 sizeof(tcp_addr)) == 0) {
 			listen(tcp_sock, 5);
-			printf("TCP socket listening on 127.0.0.1:12345 (fd=%d)\n",
+			printf("TCP socket listening on 127.0.0.1:12345 "
+			       "(fd=%d)\n",
 			       tcp_sock);
 		} else {
 			perror("TCP bind failed");
@@ -105,8 +106,8 @@ int main(void)
 		if (bind(unix_sock, (struct sockaddr *)&unix_addr,
 			 sizeof(unix_addr)) == 0) {
 			listen(unix_sock, 5);
-			printf("Unix socket listening at %s (fd=%d)\n", unix_addr.sun_path,
-			       unix_sock);
+			printf("Unix socket listening at %s (fd=%d)\n",
+			       unix_addr.sun_path, unix_sock);
 		} else {
 			perror("Unix socket bind failed");
 			close(unix_sock);
