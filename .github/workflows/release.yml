@@ -157,30 +157,13 @@ jobs:
           git tag -a "$TAG" -m "Release $TAG"
           git push origin "$TAG"
 
-      - name: Install kernel headers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y linux-headers-$(uname -r) build-essential
-
-      - name: Build release binaries
-        run: |
-          make release
-          echo "Build complete. Creating tarball..."
-          cd build
-          tar -czf ../elf_det-${{ steps.new_version.outputs.version }}-amd64.tar.gz *.ko proc_elf_ctrl test_multithread
-          cd ..
-          ls -lh elf_det-*.tar.gz
-
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.new_version.outputs.tag }}
-          name: Release ${{ steps.new_version.outputs.tag }}
+          release_name: Release ${{ steps.new_version.outputs.tag }}
           body_path: /tmp/release_notes.md
           draft: false
           prerelease: false
-          files: |
-            elf_det-${{ steps.new_version.outputs.version }}-amd64.tar.gz
-            build/elf_det.ko
-            build/proc_elf_ctrl
-            build/test_multithread
