@@ -11,6 +11,7 @@
 - **Process Memory Layout**: Code, Data, BSS, Heap, and Stack addresses
 - **Memory Pressure Monitoring**: RSS, VSZ, swap usage, page faults (major/minor), and OOM score adjustment
 - **Visual Memory Map**: Proportional bar chart visualization of memory regions
+- **Open Sockets**: List all open sockets with family (IPv4/IPv6/Unix), type, state, and addresses
 - **Thread Information**: List all threads with TID, state, CPU usage, priority, and CPU affinity
 - **CPU Usage Tracking**: Real-time CPU percentage calculation per process and thread
 - **ELF Section Analysis**: Binary base address and section boundaries
@@ -77,6 +78,15 @@ STACK (130 KB)
 High: 0x00007fff7954ba80
 --------------------------------------------------------------------------------
 
+Open Sockets:
+--------------------------------------------------------------------------------
+  [FD 3] Family: AF_INET     Type: STREAM    State: LISTEN      
+          Local:  127.0.0.1:12345  Remote: 0.0.0.0:0
+  [FD 4] Family: AF_INET     Type: DGRAM     State: CLOSE       
+          Local:  127.0.0.1:12346  Remote: 0.0.0.0:0
+  [FD 5] Family: AF_UNIX     Type: STREAM    State: LISTEN      
+--------------------------------------------------------------------------------
+
 ================================================================================
                           THREAD INFORMATION                                    
 ================================================================================
@@ -138,6 +148,8 @@ kernel_module/
 - Sizes are automatically displayed in appropriate units (B, KB, or MB)
 - Low/High addresses show the memory address range of the process
 - BSS_START and BSS_END may be equal (zero-length BSS) in modern ELF binaries. This is normal.
+- **Open Sockets**: Shows file descriptor, socket family (AF_INET, AF_INET6, AF_UNIX), type (STREAM/DGRAM), state, and addresses
+- Socket families: AF_INET (IPv4), AF_INET6 (IPv6), AF_UNIX (Unix domain), AF_NETLINK (Netlink)
 - Thread STATE: R=Running, S=Sleeping, D=Uninterruptible, T=Stopped, t=Traced, Z=Zombie, X=Dead
 - PRIORITY: Shown as nice value (-20 to 19, where lower is higher priority)
 - CPU_AFFINITY: Shows which CPUs the thread can run on

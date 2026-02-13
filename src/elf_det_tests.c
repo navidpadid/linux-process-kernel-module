@@ -404,7 +404,101 @@ int main(void)
 		is_high_memory_pressure(1024 * 1024, 200 * 1024); /* ~19% */
 	assert(high_pressure == 1);
 
+	/* socket_family_to_string tests */
+	const char *family_str;
+
+	/* Test known families */
+	family_str = socket_family_to_string(1); /* AF_UNIX */
+	assert(strcmp(family_str, "AF_UNIX") == 0);
+
+	family_str = socket_family_to_string(2); /* AF_INET */
+	assert(strcmp(family_str, "AF_INET") == 0);
+
+	family_str = socket_family_to_string(10); /* AF_INET6 */
+	assert(strcmp(family_str, "AF_INET6") == 0);
+
+	family_str = socket_family_to_string(16); /* AF_NETLINK */
+	assert(strcmp(family_str, "AF_NETLINK") == 0);
+
+	/* Test unknown family */
+	family_str = socket_family_to_string(99);
+	assert(strcmp(family_str, "UNKNOWN") == 0);
+
+	family_str = socket_family_to_string(0);
+	assert(strcmp(family_str, "UNKNOWN") == 0);
+
+	/* socket_type_to_string tests */
+	const char *type_str;
+
+	/* Test known types */
+	type_str = socket_type_to_string(1); /* SOCK_STREAM */
+	assert(strcmp(type_str, "STREAM") == 0);
+
+	type_str = socket_type_to_string(2); /* SOCK_DGRAM */
+	assert(strcmp(type_str, "DGRAM") == 0);
+
+	type_str = socket_type_to_string(3); /* SOCK_RAW */
+	assert(strcmp(type_str, "RAW") == 0);
+
+	/* Test unknown type */
+	type_str = socket_type_to_string(99);
+	assert(strcmp(type_str, "UNKNOWN") == 0);
+
+	type_str = socket_type_to_string(0);
+	assert(strcmp(type_str, "UNKNOWN") == 0);
+
+	/* socket_state_to_string tests */
+	const char *state_str;
+
+	/* Test all TCP states */
+	state_str = socket_state_to_string(1); /* TCP_ESTABLISHED */
+	assert(strcmp(state_str, "ESTABLISHED") == 0);
+
+	state_str = socket_state_to_string(2); /* TCP_SYN_SENT */
+	assert(strcmp(state_str, "SYN_SENT") == 0);
+
+	state_str = socket_state_to_string(3); /* TCP_SYN_RECV */
+	assert(strcmp(state_str, "SYN_RECV") == 0);
+
+	state_str = socket_state_to_string(4); /* TCP_FIN_WAIT1 */
+	assert(strcmp(state_str, "FIN_WAIT1") == 0);
+
+	state_str = socket_state_to_string(5); /* TCP_FIN_WAIT2 */
+	assert(strcmp(state_str, "FIN_WAIT2") == 0);
+
+	state_str = socket_state_to_string(6); /* TCP_TIME_WAIT */
+	assert(strcmp(state_str, "TIME_WAIT") == 0);
+
+	state_str = socket_state_to_string(7); /* TCP_CLOSE */
+	assert(strcmp(state_str, "CLOSE") == 0);
+
+	state_str = socket_state_to_string(8); /* TCP_CLOSE_WAIT */
+	assert(strcmp(state_str, "CLOSE_WAIT") == 0);
+
+	state_str = socket_state_to_string(9); /* TCP_LAST_ACK */
+	assert(strcmp(state_str, "LAST_ACK") == 0);
+
+	state_str = socket_state_to_string(10); /* TCP_LISTEN */
+	assert(strcmp(state_str, "LISTEN") == 0);
+
+	state_str = socket_state_to_string(11); /* TCP_CLOSING */
+	assert(strcmp(state_str, "CLOSING") == 0);
+
+	state_str = socket_state_to_string(12); /* TCP_NEW_SYN_RECV */
+	assert(strcmp(state_str, "NEW_SYN_RECV") == 0);
+
+	/* Test unknown state */
+	state_str = socket_state_to_string(0);
+	assert(strcmp(state_str, "UNKNOWN") == 0);
+
+	state_str = socket_state_to_string(99);
+	assert(strcmp(state_str, "UNKNOWN") == 0);
+
+	state_str = socket_state_to_string(255);
+	assert(strcmp(state_str, "UNKNOWN") == 0);
+
 	puts("elf_helpers tests passed");
 	puts("memory_pressure tests passed");
+	puts("socket_helpers tests passed");
 	return 0;
 }

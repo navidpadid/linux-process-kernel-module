@@ -153,3 +153,63 @@ The thread output should include:
 - Total thread count
 
 Multi-threaded processes (browsers, IDEs, servers) will show multiple threads.
+### Testing Socket Information
+
+To verify socket functionality, test with processes that have open sockets:
+
+```bash
+# Test with systemd (PID 1) - usually has several sockets
+./build/proc_elf_ctrl 1
+
+# Test with SSH daemon
+pgrep sshd | head -1 | xargs ./build/proc_elf_ctrl
+
+# Test with current shell (will show SSH connection socket if remote)
+./build/proc_elf_ctrl $$
+```
+
+The socket output should include:
+- File descriptor numbers
+- Socket family (AF_INET, AF_INET6, AF_UNIX, AF_NETLINK)
+- Socket type (STREAM, DGRAM, RAW)
+- Connection state (ESTABLISHED, LISTEN, CLOSE_WAIT, etc.)
+- Local and remote addresses/ports for inet sockets
+- IPv6 addresses in full format
+
+Processes with no open sockets will display "No open sockets".
+
+## Test Coverage
+
+### Helper Function Tests (`elf_det_tests.c`)
+
+Complete unit test coverage for all pure helper functions:
+
+#### CPU and Memory Helpers
+- `compute_usage_permyriad()` - CPU usage calculation
+- `compute_bss_range()` - BSS boundary validation
+- `compute_heap_range()` - Heap boundary validation
+- `is_address_in_range()` - Address containment check
+
+#### Thread Helpers
+- `get_thread_state_char()` - Thread state conversion
+- `build_cpu_affinity_string()` - CPU affinity formatting
+
+#### Memory Pressure Helpers
+- `calculate_rss_pages()` - RSS calculation
+- `pages_to_kb()` - Page to KB conversion
+- `calculate_total_faults()` - Total page faults
+- `is_valid_oom_score_adj()` - OOM score validation
+- `calculate_memory_usage_percent()` - Memory percentage
+- `format_page_fault_stats()` - Page fault formatting
+- `is_high_memory_pressure()` - Memory pressure detection
+
+#### Socket Helpers
+- `socket_family_to_string()` - Socket family conversion (AF_INET, AF_INET6, AF_UNIX, AF_NETLINK)
+- `socket_type_to_string()` - Socket type conversion (STREAM, DGRAM, RAW)
+- `socket_state_to_string()` - TCP state conversion (ESTABLISHED, LISTEN, etc.)
+
+All helpers are tested with:
+- Normal cases
+- Edge cases (zero, maximum values, boundaries)
+- Error cases (invalid input, NULL pointers)
+- All valid enum/state values

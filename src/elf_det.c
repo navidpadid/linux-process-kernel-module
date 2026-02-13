@@ -14,6 +14,13 @@
 #include <linux/string.h> //for string libs
 #include <linux/sched/signal.h> //for task iteration
 #include <linux/sched/cputime.h> //for task_cputime
+#include <linux/fdtable.h> //for file descriptor table
+#include <linux/net.h> //for socket operations
+#include <net/sock.h> //for sock structure
+#include <linux/tcp.h> //for TCP states
+#include <linux/in.h> //for sockaddr_in
+#include <linux/in6.h> //for sockaddr_in6
+#include <net/inet_sock.h> //for inet_sock
 #include "elf_det.h"
 
 MODULE_LICENSE("Dual BSD/GPL"); // module license
@@ -276,6 +283,132 @@ static void print_memory_pressure(struct seq_file *m, struct task_struct *task)
 	seq_puts(m, "----------------------\n");
 }
 
+/* Display open socket information for the process
+ * Shows socket file descriptors including family, type, state, and addresses
+ */
+static void print_sockets(struct seq_file *m, struct task_struct *task)
+{
+	struct files_struct *files;
+	struct fdtable *fdt;
+	struct file *file;
+	struct socket *sock;
+	struct sock *sk;
+	struct inet_sock *inet;
+	unsigned int fd;
+	int socket_count = 0;
+	unsigned short family, type;
+	unsigned char state;
+	__be32 saddr, daddr;
+	__be16 sport, dport;
+	int i;
+
+	files = task->files;
+	if (!files)
+		return;
+
+	seq_puts(m, "\nOpen Sockets:\n");
+	seq_puts(m,
+		 "----------------------------------------------------------");
+	seq_puts(m, "----------------------\n");
+
+	rcu_read_lock();
+	fdt = files_fdtable(files);
+
+	/* Iterate through file descriptors */
+	for (fd = 0; fd < fdt->max_fds; fd++) {
+		file = rcu_dereference(fdt->fd[fd]);
+		if (!file)
+			continue;
+
+		/* Check if this file descriptor is a socket */
+		sock = sock_from_file(file);
+		if (!sock)
+			continue;
+
+		socket_count++;
+		sk = sock->sk;
+		if (!sk)
+			continue;
+
+		family = sk->sk_family;
+		type = sk->sk_type;
+		state = sk->sk_state;
+
+		seq_printf(
+			m,
+			"  [FD %u] Family: %-10s  Type: %-8s  State: %-12s\n",
+			fd, socket_family_to_string(family),
+			socket_type_to_string(type),
+			socket_state_to_string(state));
+
+		/* Display address information for inet sockets */
+		if (family == AF_INET && sk->sk_prot) {
+			inet = inet_sk(sk);
+			if (inet) {
+				unsigned int saddr_h, daddr_h;
+
+				saddr = inet->inet_saddr;
+				daddr = inet->inet_daddr;
+				sport = inet->inet_sport;
+				dport = inet->inet_dport;
+
+				/* Convert to host byte order for display */
+				saddr_h = ntohl(saddr);
+				daddr_h = ntohl(daddr);
+
+				seq_printf(m,
+					   "          Local:  %u.%u.%u.%u:%u",
+					   (saddr_h >> 24) & 0xFF,
+					   (saddr_h >> 16) & 0xFF,
+					   (saddr_h >> 8) & 0xFF,
+					   saddr_h & 0xFF, ntohs(sport));
+				seq_printf(m, "  Remote: %u.%u.%u.%u:%u\n",
+					   (daddr_h >> 24) & 0xFF,
+					   (daddr_h >> 16) & 0xFF,
+					   (daddr_h >> 8) & 0xFF,
+					   daddr_h & 0xFF, ntohs(dport));
+			}
+		} else if (family == AF_INET6 && sk->sk_prot) {
+			/* IPv6 addresses */
+			struct in6_addr *saddr6 = &sk->sk_v6_rcv_saddr;
+			struct in6_addr *daddr6 = &sk->sk_v6_daddr;
+
+			inet = inet_sk(sk);
+			if (inet) {
+				sport = inet->inet_sport;
+				dport = inet->inet_dport;
+
+				seq_puts(m, "          Local:  ");
+				for (i = 0; i < 8; i++) {
+					if (i > 0)
+						seq_puts(m, ":");
+					seq_printf(m, "%04x",
+						   ntohs(saddr6->s6_addr16[i]));
+				}
+				seq_printf(m, ":%u", ntohs(sport));
+
+				seq_puts(m, "  Remote: ");
+				for (i = 0; i < 8; i++) {
+					if (i > 0)
+						seq_puts(m, ":");
+					seq_printf(m, "%04x",
+						   ntohs(daddr6->s6_addr16[i]));
+				}
+				seq_printf(m, ":%u\n", ntohs(dport));
+			}
+		}
+	}
+
+	rcu_read_unlock();
+
+	if (socket_count == 0)
+		seq_puts(m, "  No open sockets\n");
+
+	seq_puts(m,
+		 "----------------------------------------------------------");
+	seq_puts(m, "----------------------\n");
+}
+
 // this function is the base function to gather information from kernel
 static int elfdet_show(struct seq_file *m, void *v)
 {
@@ -357,6 +490,7 @@ static int elfdet_show(struct seq_file *m, void *v)
 	print_memory_layout_visualization(m, task, bss_start, bss_end,
 					  heap_start, heap_end, stack_start,
 					  stack_end);
+	print_sockets(m, task);
 
 	return 0;
 }
