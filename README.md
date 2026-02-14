@@ -12,6 +12,7 @@
 - **Memory Pressure Monitoring**: RSS, VSZ, swap usage, page faults (major/minor), and OOM score adjustment
 - **Visual Memory Map**: Proportional bar chart visualization of memory regions
 - **Open Sockets**: List all open sockets with family (IPv4/IPv6/Unix), type, state, and addresses
+- **Network Stats (Brief)**: Per-process TCP counters (bytes/packets/retransmits), drops, and net devices
 - **Thread Information**: List all threads with TID, state, CPU usage, priority, and CPU affinity
 - **CPU Usage Tracking**: Real-time CPU percentage calculation per process and thread
 - **ELF Section Analysis**: Binary base address and section boundaries
@@ -77,6 +78,16 @@ STACK (130 KB)
 
 High: 0x00007fff7954ba80
 --------------------------------------------------------------------------------
+
+[network]
+sockets_total: 6 (tcp: 4, udp: 2)
+rx_packets: 18342
+tx_packets: 12107
+rx_bytes: 21458990
+tx_bytes: 10822144
+tcp_retransmits: 37
+drops: 2
+net_devices: eth0=4 lo=2
 
 Open Sockets:
 --------------------------------------------------------------------------------

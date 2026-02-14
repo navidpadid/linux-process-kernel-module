@@ -16,6 +16,7 @@
 #include <linux/sched/cputime.h> //for task_cputime
 #include <linux/fdtable.h> //for file descriptor table
 #include <linux/net.h> //for socket operations
+#include <linux/netdevice.h> //for net_device
 #include <net/sock.h> //for sock structure
 #include <linux/tcp.h> //for TCP states
 #include <linux/in.h> //for sockaddr_in
@@ -283,6 +284,104 @@ static void print_memory_pressure(struct seq_file *m, struct task_struct *task)
 	seq_puts(m, "----------------------\n");
 }
 
+/* Display brief per-process network statistics
+ * Counts are best-effort and primarily reflect TCP socket counters.
+ */
+static void print_network_stats(struct seq_file *m, struct task_struct *task)
+{
+	struct files_struct *files;
+	struct fdtable *fdt;
+	struct file *file;
+	struct socket *sock;
+	struct sock *sk;
+	struct tcp_sock *tp;
+	unsigned int fd;
+	u64 rx_packets = 0, tx_packets = 0;
+	u64 rx_bytes = 0, tx_bytes = 0;
+	u64 tcp_retransmits = 0;
+	u64 drops = 0;
+	int socket_total = 0, tcp_count = 0, udp_count = 0;
+	struct netdev_count netdevs[ELF_DET_NETDEV_MAX];
+	int netdev_len = 0;
+	int ifindex;
+	struct net_device *dev;
+	const char *dev_name;
+	int i;
+
+	files = task->files;
+	if (!files)
+		return;
+
+	seq_puts(m, "\n[network]\n");
+
+	rcu_read_lock();
+	fdt = files_fdtable(files);
+
+	for (fd = 0; fd < fdt->max_fds; fd++) {
+		file = rcu_dereference(fdt->fd[fd]);
+		if (!file)
+			continue;
+
+		sock = sock_from_file(file);
+		if (!sock)
+			continue;
+
+		socket_total++;
+		sk = sock->sk;
+		if (!sk)
+			continue;
+
+		drops += (u64)atomic_read(&sk->sk_drops);
+
+		if (sk->sk_protocol == IPPROTO_TCP) {
+			tp = tcp_sk(sk);
+			tcp_count++;
+			rx_packets += (u64)READ_ONCE(tp->segs_in);
+			tx_packets += (u64)READ_ONCE(tp->segs_out);
+			rx_bytes += (u64)READ_ONCE(tp->bytes_received);
+			tx_bytes += (u64)READ_ONCE(tp->bytes_sent);
+			tcp_retransmits += (u64)READ_ONCE(tp->retrans_out);
+		} else if (sk->sk_protocol == IPPROTO_UDP) {
+			udp_count++;
+		}
+
+		ifindex = READ_ONCE(sk->sk_bound_dev_if);
+		if (!ifindex)
+			ifindex = READ_ONCE(sk->sk_rx_dst_ifindex);
+
+		if (ifindex > 0) {
+			dev = dev_get_by_index_rcu(sock_net(sk), ifindex);
+			dev_name = dev ? dev->name : "unknown";
+			add_netdev_count(netdevs, &netdev_len,
+					 ELF_DET_NETDEV_MAX, ifindex, dev_name);
+		}
+	}
+
+	rcu_read_unlock();
+
+	seq_printf(m, "sockets_total: %d (tcp: %d, udp: %d)\n", socket_total,
+		   tcp_count, udp_count);
+	seq_printf(m, "rx_packets: %llu\n", rx_packets);
+	seq_printf(m, "tx_packets: %llu\n", tx_packets);
+	seq_printf(m, "rx_bytes: %llu\n", rx_bytes);
+	seq_printf(m, "tx_bytes: %llu\n", tx_bytes);
+	seq_printf(m, "tcp_retransmits: %llu\n", tcp_retransmits);
+	seq_printf(m, "drops: %llu\n", drops);
+
+	if (netdev_len == 0) {
+		seq_puts(m, "net_devices: none\n");
+		return;
+	}
+
+	seq_puts(m, "net_devices: ");
+	for (i = 0; i < netdev_len; i++) {
+		seq_printf(m, "%s=%d", netdevs[i].name, netdevs[i].count);
+		if (i + 1 < netdev_len)
+			seq_puts(m, " ");
+	}
+	seq_puts(m, "\n");
+}
+
 /* Display open socket information for the process
  * Shows socket file descriptors including family, type, state, and addresses
  */
@@ -490,6 +589,7 @@ static int elfdet_show(struct seq_file *m, void *v)
 	print_memory_layout_visualization(m, task, bss_start, bss_end,
 					  heap_start, heap_end, stack_start,
 					  stack_end);
+	print_network_stats(m, task);
 	print_sockets(m, task);
 
 	return 0;
