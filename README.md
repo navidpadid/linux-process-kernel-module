@@ -12,6 +12,7 @@
 - **Memory Pressure Monitoring**: RSS, VSZ, swap usage, page faults (major/minor), and OOM score adjustment
 - **Visual Memory Map**: Proportional bar chart visualization of memory regions
 - **Open Sockets**: List all open sockets with family (IPv4/IPv6/Unix), type, state, and addresses
+- **Network Stats (Brief)**: Per-process TCP counters, socket counts (TCP/UDP/UNIX), drops, and net devices
 - **Thread Information**: List all threads with TID, state, CPU usage, priority, and CPU affinity
 - **CPU Usage Tracking**: Real-time CPU percentage calculation per process and thread
 - **ELF Section Analysis**: Binary base address and section boundaries
@@ -22,83 +23,122 @@
 ### Example Output
 
 ```
->> Enter process ID (or Ctrl+C to exit): 1219
+>> Enter process ID (or Ctrl+C to exit): 7645
 
-================================================================================
-                          PROCESS INFORMATION                                   
-================================================================================
-Command line:   ./build/test_multithread 
-Process ID:      1219
-Name:            test_multithrea
-CPU Usage:       2.81%
+===============================================================
+PROCESS INFORMATION
+===============================================================
+Command line:  /vscode/vscode-server/bin/linux-x64/b6a47e94e326b5c209d118cf0f994d6065585705/node --dns-result-order=ipv4first /vscode/
+vscode-server/bin/linux-x64/b6a47e94e326b5c209d118cf0f994d6065585705/out/bootstrap-fork --type=extensionHost --transformURIs --useHostP
+roxy=true  
+Process ID:     7645
+Name:            node
+CPU Usage:       2.28%
 
 Memory Pressure Statistics:
 --------------------------------------------------------------------------------
-  RSS (Resident):  1408 KB
-    - Anonymous:   0 KB
-    - File-backed: 1408 KB
-    - Shared Mem:  0 KB
-  VSZ (Virtual):   35464 KB
-  Swap Usage:      0 KB
-  Page Faults:
-    - Major:       0
-    - Minor:       119
-    - Total:       119
-  OOM Score Adj:   0
+ RSS (Resident):  821420 KB
+   - Anonymous:   753576 KB
+   - File-backed: 67844 KB
+   - Shared Mem:  0 KB
+ VSZ (Virtual):   66781376 KB
+ Swap Usage:      0 KB
+ Page Faults:
+   - Major:       70
+   - Minor:       2235493
+   - Total:       2235563
+ OOM Score Adj:   0
 --------------------------------------------------------------------------------
 
 Memory Layout:
 --------------------------------------------------------------------------------
-  Code Section:    0x0000603a34f21000 - 0x0000603a34f21459
-  Data Section:    0x0000603a34f23d78 - 0x0000603a34f24010
-  BSS Section:     0x0000603a34f24010 - 0x0000603a4a0b7000
-  Heap:            0x0000603a4a0b7000 - 0x0000603a4a0d8000
-  Stack:           0x00007fff7954ba80 - 0x00007fff7952b000
-  ELF Base:        0x0000603a34f20000
+ Code Section:    0x0000000000e30000 - 0x0000000003400451
+ Data Section:    0x00000000069c68e8 - 0x00000000069f2c30
+ BSS Section:     0x00000000069f2c30 - 0x000000002d34a000
+ Heap:            0x000000002d34a000 - 0x0000000035bf3000
+ Stack:           0x00007fff6729f880 - 0x00007fff671a8000
+ ELF Base:        0x0000000000400000
 
 Memory Layout Visualization:
 --------------------------------------------------------------------------------
-Low:  0x0000603a34f21000
+Low:  0x0000000000e30000
 
-CODE  (1 KB)
-      [=                                                 ]
+CODE  (37 MB)
+     [==                                                 ]
 
-DATA  (664 B)
-      [=                                                 ]
+DATA  (176 KB)
+     [=                                                  ]
 
-BSS   (337 MB)
-      [================================================= ]
+BSS   (617 MB)
+     [======================================           ]
 
-HEAP  (132 KB)
-      [=                                                 ]
+HEAP  (136 MB)
+     [========                                         ]
 
-STACK (130 KB)
-      [=                                                 ]
+STACK (990 KB)
+     [=                                                  ]
 
-High: 0x00007fff7954ba80
+High: 0x00007fff6729f880
 --------------------------------------------------------------------------------
+
+[network]
+sockets_total: 19 (tcp: 2, udp: 0, unix: 17)
+rx_packets: 34284
+tx_packets: 33993
+rx_bytes: 68980951
+tx_bytes: 37736732
+tcp_retransmits: 0
+drops: 0
+net_devices: lo=1 eth0=1
 
 Open Sockets:
 --------------------------------------------------------------------------------
-  [FD 3] Family: AF_INET     Type: STREAM    State: LISTEN      
-          Local:  127.0.0.1:12345  Remote: 0.0.0.0:0
-  [FD 4] Family: AF_INET     Type: DGRAM     State: CLOSE       
-          Local:  127.0.0.1:12346  Remote: 0.0.0.0:0
-  [FD 5] Family: AF_UNIX     Type: STREAM    State: LISTEN      
+ [FD 0] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 1] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 2] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 3] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 23] Family: AF_INET     Type: STREAM    State: ESTABLISHED  
+         Local:  127.0.0.1:[REDACTED]  Remote: 127.0.0.1:[REDACTED]
+ [FD 26] Family: AF_UNIX     Type: STREAM    State: LISTEN       
+ [FD 36] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 37] Family: AF_UNIX     Type: STREAM    State: LISTEN       
+ [FD 39] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 41] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 43] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 45] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 49] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 50] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 51] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 53] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 57] Family: AF_UNIX     Type: STREAM    State: ESTABLISHED  
+ [FD 59] Family: AF_INET     Type: STREAM    State: ESTABLISHED  
+         Local:  [INTERNAL_IP]:[PORT]  Remote: [REDACTED_PUBLIC_IP]:443
+ [FD 62] Family: AF_UNIX     Type: STREAM    State: LISTEN       
 --------------------------------------------------------------------------------
 
-================================================================================
-                          THREAD INFORMATION                                    
-================================================================================
-TID    NAME             CPU(%)   STATE  PRIORITY  NICE  CPU_AFFINITY
+===============================================================
+THREAD INFORMATION
+===============================================================
+TID    NAME            CPU(%)  STATE  PRIORITY  NICE  CPU_AFFINITY
 -----  ---------------  -------  -----  --------  ----  ----------------
-1219   test_multithrea     2.81   S         0         0  0,1
-1221   test_multithrea     0.42   S         0         0  0,1
-1222   test_multithrea     0.14   S         0         0  0,1
-1223   test_multithrea     0.22   S         0         0  0,1
-1224   test_multithrea     0.31   S         0         0  0,1
+7645   node               2.28   S        0        0  0,1,2,3,4,5,6,7
+7650   DelayedTaskSche    0.00   S        0        0  0,1,2,3,4,5,6,7
+7651   node               0.29   S        0        0  0,1,2,3,4,5,6,7
+7652   node               0.29   S        0        0  0,1,2,3,4,5,6,7
+7653   node               0.29   S        0        0  0,1,2,3,4,5,6,7
+7654   node               0.29   S        0        0  0,1,2,3,4,5,6,7
+7663   node               0.00   S        0        0  0,1,2,3,4,5,6,7
+7675   libuv-worker       0.04   S        0        0  0,1,2,3,4,5,6,7
+7676   libuv-worker       0.05   S        0        0  0,1,2,3,4,5,6,7
+7677   libuv-worker       0.04   S        0        0  0,1,2,3,4,5,6,7
+7678   libuv-worker       0.05   S        0        0  0,1,2,3,4,5,6,7
+7728   node               0.00   S        0        0  0,1,2,3,4,5,6,7
+7732   node               0.00   S        0        0  0,1,2,3,4,5,6,7
+13594  node               0.05   S        0        0  0,1,2,3,4,5,6,7
+18189  node               0.01   S        0        0  0,1,2,3,4,5,6,7
 --------------------------------------------------------------------------------
-Total threads: 5
+Total threads: 15
+===============================================================
 ```
 
 ## Quick Start

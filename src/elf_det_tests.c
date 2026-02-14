@@ -497,8 +497,46 @@ int main(void)
 	state_str = socket_state_to_string(255);
 	assert(strcmp(state_str, "UNKNOWN") == 0);
 
+	/* netdev_count tests */
+	struct netdev_count devs[ELF_DET_NETDEV_MAX];
+	int dev_len = 0;
+	int start_len;
+	int i;
+
+	memset(devs, 0, sizeof(devs));
+	add_netdev_count(devs, &dev_len, ELF_DET_NETDEV_MAX, 2, "eth0");
+	assert(dev_len == 1);
+	assert(devs[0].ifindex == 2);
+	assert(devs[0].count == 1);
+	assert(strcmp(devs[0].name, "eth0") == 0);
+
+	add_netdev_count(devs, &dev_len, ELF_DET_NETDEV_MAX, 2, "eth1");
+	assert(dev_len == 1);
+	assert(devs[0].count == 2);
+	assert(strcmp(devs[0].name, "eth0") == 0);
+
+	add_netdev_count(devs, &dev_len, ELF_DET_NETDEV_MAX, 1, "lo");
+	assert(dev_len == 2);
+	assert(devs[1].ifindex == 1);
+	assert(devs[1].count == 1);
+	assert(strcmp(devs[1].name, "lo") == 0);
+
+	start_len = dev_len;
+	for (i = start_len; i < ELF_DET_NETDEV_MAX; i++) {
+		char name_buf[16];
+
+		snprintf(name_buf, sizeof(name_buf), "d%d", i);
+		add_netdev_count(devs, &dev_len, ELF_DET_NETDEV_MAX, 100 + i,
+				 name_buf);
+	}
+	assert(dev_len == ELF_DET_NETDEV_MAX);
+
+	add_netdev_count(devs, &dev_len, ELF_DET_NETDEV_MAX, 999, "extra");
+	assert(dev_len == ELF_DET_NETDEV_MAX);
+
 	puts("elf_helpers tests passed");
 	puts("memory_pressure tests passed");
 	puts("socket_helpers tests passed");
+	puts("netdev_count tests passed");
 	return 0;
 }

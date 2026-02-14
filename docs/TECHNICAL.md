@@ -56,6 +56,25 @@ The process information output includes an open sockets section that lists all o
 
 The socket listing provides visibility into network connections and IPC sockets in use by the process. For processes with no open sockets, displays "No open sockets".
 
+### Network Stats (Brief)
+
+The process information output includes a brief network stats section, aggregated across the process sockets:
+
+| Field | Description | Source |
+|-------|-------------|--------|
+| **sockets_total** | Total sockets and TCP/UDP/UNIX counts | File descriptor scan + `sk_protocol`/`sk_family` |
+| **rx_packets** | Total TCP segments received | `struct tcp_sock::segs_in` |
+| **tx_packets** | Total TCP segments sent | `struct tcp_sock::segs_out` |
+| **rx_bytes** | Total TCP bytes received | `struct tcp_sock::bytes_received` |
+| **tx_bytes** | Total TCP bytes sent | `struct tcp_sock::bytes_sent` |
+| **tcp_retransmits** | TCP retransmitted segments | `struct tcp_sock::retrans_out` |
+| **drops** | Raw/UDP drops | `struct sock::sk_drops` |
+| **net_devices** | Device names with socket counts | `sk_bound_dev_if` or `sk_rx_dst_ifindex` |
+
+Notes:
+- Packet and byte counters are best-effort and only reflect TCP sockets. UDP and UNIX sockets are counted but do not contribute to byte/packet totals.
+- Device mapping uses the socket bound interface or RX route ifindex; if neither is set, the socket is not attributed to a device.
+
 ### Important Notes and Limitations
 
 #### 1. BSS May Be Zero-Length
@@ -133,6 +152,7 @@ The output is human-readable and grouped into sections:
 - Memory pressure statistics (RSS, VSZ, swap, faults, OOM adjustment)
 - Memory layout (code/data/BSS/heap/stack/ELF base)
 - Memory layout visualization
+- Network stats (brief)
 - Open sockets (file descriptors, address families, connection states)
 
 ### Thread Information (`/proc/elf_det/threads`)

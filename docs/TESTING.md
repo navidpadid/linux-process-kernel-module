@@ -178,6 +178,22 @@ The socket output should include:
 
 Processes with no open sockets will display "No open sockets".
 
+### Testing Network Stats (Brief)
+
+The process output should include a short network section when sockets exist:
+
+```bash
+./build/proc_elf_ctrl $$
+```
+
+Look for:
+- `[network]`
+- `sockets_total:`
+- `net_devices:`
+
+Note: RX/TX bytes and packets are aggregated from TCP sockets only. UNIX
+sockets are counted but do not contribute to byte/packet totals.
+
 ## Test Coverage
 
 ### Helper Function Tests (`elf_det_tests.c`)
@@ -207,6 +223,7 @@ Complete unit test coverage for all pure helper functions:
 - `socket_family_to_string()` - Socket family conversion (AF_INET, AF_INET6, AF_UNIX, AF_NETLINK)
 - `socket_type_to_string()` - Socket type conversion (STREAM, DGRAM, RAW)
 - `socket_state_to_string()` - TCP state conversion (ESTABLISHED, LISTEN, etc.)
+- `add_netdev_count()` - Net device usage aggregation helper
 
 All helpers are tested with:
 - Normal cases

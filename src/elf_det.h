@@ -3,10 +3,14 @@
 
 #ifdef __KERNEL__
 #include <linux/types.h>
+#include <linux/if.h>
 typedef u64 eh_u64;
 #else
 #include <stdint.h>
 #include <stdio.h>
+#ifndef IFNAMSIZ
+#define IFNAMSIZ 16
+#endif
 typedef unsigned long long u64;
 typedef u64 eh_u64;
 #endif
@@ -156,6 +160,15 @@ struct memory_region {
 	int exists; /* 1 if region should be displayed, 0 otherwise */
 };
 
+#define ELF_DET_NETDEV_MAX	8
+#define ELF_DET_NETDEV_NAME_MAX IFNAMSIZ
+
+struct netdev_count {
+	int ifindex;
+	int count;
+	char name[ELF_DET_NETDEV_NAME_MAX];
+};
+
 /* Format size with appropriate unit (B, KB, MB)
  * Returns number of characters written (excluding null terminator)
  */
@@ -243,6 +256,37 @@ generate_region_visualization(const struct memory_region *region,
 	len += snprintf(out_buf + len, buf_size - len, "]\n\n");
 
 	return len;
+}
+
+/* Track interface usage count by ifindex
+ * Adds or increments entry; respects max_entries.
+ */
+static inline void add_netdev_count(struct netdev_count *list,
+				    int *list_len,
+				    int max_entries,
+				    int ifindex,
+				    const char *name)
+{
+	int i;
+
+	if (!list || !list_len || !name || max_entries <= 0)
+		return;
+
+	for (i = 0; i < *list_len; i++) {
+		if (list[i].ifindex == ifindex) {
+			list[i].count++;
+			return;
+		}
+	}
+
+	if (*list_len >= max_entries)
+		return;
+
+	list[*list_len].ifindex = ifindex;
+	list[*list_len].count = 1;
+	snprintf(list[*list_len].name, sizeof(list[*list_len].name), "%s",
+		 name);
+	(*list_len)++;
 }
 
 /* Memory Pressure Statistics Helper Functions */
