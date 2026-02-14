@@ -62,7 +62,7 @@ The process information output includes a brief network stats section, aggregate
 
 | Field | Description | Source |
 |-------|-------------|--------|
-| **sockets_total** | Total sockets and TCP/UDP counts | File descriptor scan + `sk_protocol` |
+| **sockets_total** | Total sockets and TCP/UDP/UNIX counts | File descriptor scan + `sk_protocol`/`sk_family` |
 | **rx_packets** | Total TCP segments received | `struct tcp_sock::segs_in` |
 | **tx_packets** | Total TCP segments sent | `struct tcp_sock::segs_out` |
 | **rx_bytes** | Total TCP bytes received | `struct tcp_sock::bytes_received` |
@@ -72,7 +72,7 @@ The process information output includes a brief network stats section, aggregate
 | **net_devices** | Device names with socket counts | `sk_bound_dev_if` or `sk_rx_dst_ifindex` |
 
 Notes:
-- Packet and byte counters are best-effort and only reflect TCP sockets. UDP sockets are counted but do not contribute to byte/packet totals.
+- Packet and byte counters are best-effort and only reflect TCP sockets. UDP and UNIX sockets are counted but do not contribute to byte/packet totals.
 - Device mapping uses the socket bound interface or RX route ifindex; if neither is set, the socket is not attributed to a device.
 
 ### Important Notes and Limitations

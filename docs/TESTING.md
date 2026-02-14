@@ -191,7 +191,8 @@ Look for:
 - `sockets_total:`
 - `net_devices:`
 
-Note: RX/TX bytes and packets are aggregated from TCP sockets only.
+Note: RX/TX bytes and packets are aggregated from TCP sockets only. UNIX
+sockets are counted but do not contribute to byte/packet totals.
 
 ## Test Coverage
 

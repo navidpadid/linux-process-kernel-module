@@ -300,7 +300,7 @@ static void print_network_stats(struct seq_file *m, struct task_struct *task)
 	u64 rx_bytes = 0, tx_bytes = 0;
 	u64 tcp_retransmits = 0;
 	u64 drops = 0;
-	int socket_total = 0, tcp_count = 0, udp_count = 0;
+	int socket_total = 0, tcp_count = 0, udp_count = 0, unix_count = 0;
 	struct netdev_count netdevs[ELF_DET_NETDEV_MAX];
 	int netdev_len = 0;
 	int ifindex;
@@ -345,6 +345,9 @@ static void print_network_stats(struct seq_file *m, struct task_struct *task)
 			udp_count++;
 		}
 
+		if (sk->sk_family == AF_UNIX)
+			unix_count++;
+
 		ifindex = READ_ONCE(sk->sk_bound_dev_if);
 		if (!ifindex)
 			ifindex = READ_ONCE(sk->sk_rx_dst_ifindex);
@@ -359,8 +362,8 @@ static void print_network_stats(struct seq_file *m, struct task_struct *task)
 
 	rcu_read_unlock();
 
-	seq_printf(m, "sockets_total: %d (tcp: %d, udp: %d)\n", socket_total,
-		   tcp_count, udp_count);
+	seq_printf(m, "sockets_total: %d (tcp: %d, udp: %d, unix: %d)\n",
+		   socket_total, tcp_count, udp_count, unix_count);
 	seq_printf(m, "rx_packets: %llu\n", rx_packets);
 	seq_printf(m, "tx_packets: %llu\n", tx_packets);
 	seq_printf(m, "rx_bytes: %llu\n", rx_bytes);
