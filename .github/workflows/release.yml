@@ -131,21 +131,21 @@ jobs:
           
           # Create release notes
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Use PR body for release notes
+            # Use PR metadata from event payload to avoid shell parsing issues
+            PR_TITLE=$(jq -r '.pull_request.title // ""' "$GITHUB_EVENT_PATH")
+            PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+
             {
-              echo "## ${{ github.event.pull_request.title }}"
-              echo ""
-              echo "${{ github.event.pull_request.body }}"
-              echo ""
-              echo "---"
-              echo "**Version**: $VERSION | **Type**: $BUMP_TYPE"
+              printf '## %s\n\n' "$PR_TITLE"
+              printf '%s\n' "$PR_BODY"
+              printf '\n---\n'
+              printf '**Version**: %s | **Type**: %s\n' "$VERSION" "$BUMP_TYPE"
             } > /tmp/release_notes.md
           else
             # Manual workflow dispatch
             {
-              echo "Release $VERSION"
-              echo ""
-              echo "**Version bump**: $BUMP_TYPE"
+              printf 'Release %s\n\n' "$VERSION"
+              printf '**Version bump**: %s\n' "$BUMP_TYPE"
             } > /tmp/release_notes.md
           fi
           
@@ -158,12 +158,10 @@ jobs:
           git push origin "$TAG"
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.new_version.outputs.tag }}
-          release_name: Release ${{ steps.new_version.outputs.tag }}
+          name: Release ${{ steps.new_version.outputs.tag }}
           body_path: /tmp/release_notes.md
           draft: false
           prerelease: false
