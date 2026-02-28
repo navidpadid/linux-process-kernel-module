@@ -719,14 +719,15 @@ static ssize_t procfile_write(struct file *file,
 			      size_t length,
 			      loff_t *offset)
 {
-	long ret;
+	size_t to_copy;
 
-	ret = strncpy_from_user(buff, buffer, sizeof(buff) - 1);
-	// copy the characters to buff (global buffer, in order to use it in
-	// kernel)
-	if (ret < 0)
-		return ret;
-	buff[ret] = '\0'; // Null terminate
+	to_copy = min(length, sizeof(buff) - 1);
+	memset(buff, 0, sizeof(buff));
+
+	if (copy_from_user(buff, buffer, to_copy))
+		return -EFAULT;
+
+	buff[to_copy] = '\0';
 	pr_info("procfs_write called\n");
 	return length;
 }
