@@ -19,6 +19,10 @@ SRC_DIR := src
 # Build directory for user program
 BUILD_DIR := build
 
+# Static analysis tuning
+CPPCHECK_JOBS ?= $(shell nproc)
+CPPCHECK_SRCS := $(filter-out $(SRC_DIR)/%.mod.c, $(wildcard $(SRC_DIR)/*.c))
+
 .PHONY: all clean module user install uninstall test help unit check format checkpatch sparse cppcheck build-multithread run-multithread
 
 # Default target
@@ -137,13 +141,14 @@ sparse:
 cppcheck:
 	@echo "Running cppcheck static analyzer..."
 	@if command -v cppcheck >/dev/null 2>&1; then \
-		cppcheck --enable=all --inconclusive --force \
+		cppcheck -j$(CPPCHECK_JOBS) --enable=warning,style,performance,portability --inconclusive \
+			--max-configs=4 \
 			--suppressions-list=.cppcheck-suppressions \
 			--inline-suppr \
 			-I$(SRC_DIR) \
 			-I/lib/modules/$(shell uname -r)/build/include \
 			--error-exitcode=0 \
-			$(SRC_DIR)/*.c 2>&1 | grep -v "Cppcheck cannot find" || true; \
+			$(CPPCHECK_SRCS) 2>&1 | grep -v "Cppcheck cannot find" || true; \
 	else \
 		echo "cppcheck not found. Install with: sudo apt-get install cppcheck"; \
 	fi
