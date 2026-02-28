@@ -263,14 +263,14 @@ jobs:
 
           chmod +x "$PKG_DIR/amd64/proc_elf_ctrl" "$PKG_DIR/arm64/proc_elf_ctrl"
 
-          cat > "$PKG_DIR/README-QUICKSTART.md" << EOF
-          # Quick Start (Linux kernel ${TARGET_KERNEL_BASE}.x)
+          cat > "$PKG_DIR/README-QUICKSTART.md" << 'EOF'
+          # Quick Start (Linux kernel __TARGET_KERNEL_BASE__.x)
 
           This package contains prebuilt binaries for:
           - amd64 (x86_64)
           - arm64 (aarch64)
 
-          Version: ${RELEASE_VERSION}
+          Version: __RELEASE_VERSION__
 
           ## 1) Choose architecture
 
@@ -296,7 +296,7 @@ jobs:
           ## 3) Run user program
 
           ```bash
-          ./<arch>/proc_elf_ctrl
+          sudo ./<arch>/proc_elf_ctrl
           ```
 
           ## 4) Unload module
@@ -305,6 +305,11 @@ jobs:
           sudo rmmod elf_det
           ```
           EOF
+
+          sed -i \
+            -e "s/__TARGET_KERNEL_BASE__/${TARGET_KERNEL_BASE}/g" \
+            -e "s/__RELEASE_VERSION__/${RELEASE_VERSION}/g" \
+            "$PKG_DIR/README-QUICKSTART.md"
 
           tar -czf "$ARCHIVE_PATH" -C dist "$PKG_NAME"
           sha256sum "$ARCHIVE_PATH" > "${ARCHIVE_PATH}.sha256"
