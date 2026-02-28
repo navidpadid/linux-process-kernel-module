@@ -16,11 +16,14 @@ on:
     branches:
       - main
 
+env:
+  TARGET_KERNEL_BASE: 6.8.0
+
 jobs:
-  release:
+  prepare_release:
     if: |
-      github.event_name == 'workflow_dispatch' || 
-      (github.event.pull_request.merged == true && 
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
        !contains(github.event.pull_request.labels.*.name, 'not-a-release') &&
        (contains(github.event.pull_request.labels.*.name, 'release:major') ||
         contains(github.event.pull_request.labels.*.name, 'release:minor') ||
@@ -29,7 +32,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
-    
+    outputs:
+      release_tag: ${{ steps.new_version.outputs.tag }}
+      release_version: ${{ steps.new_version.outputs.version }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -124,7 +130,6 @@ jobs:
           echo "New version: $NEW_VERSION"
 
       - name: Create release notes
-        id: release_notes
         run: |
           VERSION="${{ steps.new_version.outputs.version }}"
           BUMP_TYPE="${{ steps.version_type.outputs.type }}"
@@ -151,17 +156,182 @@ jobs:
           
           cat /tmp/release_notes.md
 
-      - name: Create and push tag
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: /tmp/release_notes.md
+          if-no-files-found: error
+
+  build_binaries:
+    needs: prepare_release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
         run: |
-          TAG="${{ steps.new_version.outputs.tag }}"
+          sudo apt-get update
+          sudo apt-get install -y build-essential linux-headers-generic
+
+      - name: Build binaries for target kernel
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+
+          KDIR=$(ls -d /usr/src/linux-headers-${TARGET_KERNEL_BASE}-*-generic 2>/dev/null \
+                 | sort -V | tail -n 1)
+
+          if [[ -z "${KDIR:-}" ]]; then
+            echo "No Ubuntu ${TARGET_KERNEL_BASE}.x generic kernel headers found"
+            exit 1
+          fi
+
+          echo "Using kernel headers: $KDIR"
+
+          make KDIR="$KDIR" clean
+          make KDIR="$KDIR" module
+          make user
+
+          mkdir -p "out/${TARGET_ARCH}"
+          cp build/elf_det.ko "out/${TARGET_ARCH}/elf_det.ko"
+          cp build/proc_elf_ctrl "out/${TARGET_ARCH}/proc_elf_ctrl"
+
+      - name: Upload architecture binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.arch }}
+          path: out/${{ matrix.arch }}/*
+          if-no-files-found: error
+
+  publish_release:
+    needs:
+      - prepare_release
+      - build_binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/artifacts
+
+      - name: Create bundled binary package
+        id: package
+        env:
+          RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.prepare_release.outputs.release_version }}
+        run: |
+          set -euo pipefail
+
+          PKG_NAME="elf_det-binaries-${RELEASE_TAG}-linux-${TARGET_KERNEL_BASE}"
+          PKG_DIR="dist/${PKG_NAME}"
+          ARCHIVE_PATH="dist/${PKG_NAME}.tar.gz"
+
+          mkdir -p "$PKG_DIR/amd64" "$PKG_DIR/arm64"
+
+          cp dist/artifacts/binaries-amd64/elf_det.ko "$PKG_DIR/amd64/"
+          cp dist/artifacts/binaries-amd64/proc_elf_ctrl "$PKG_DIR/amd64/"
+          cp dist/artifacts/binaries-arm64/elf_det.ko "$PKG_DIR/arm64/"
+          cp dist/artifacts/binaries-arm64/proc_elf_ctrl "$PKG_DIR/arm64/"
+
+          chmod +x "$PKG_DIR/amd64/proc_elf_ctrl" "$PKG_DIR/arm64/proc_elf_ctrl"
+
+          cat > "$PKG_DIR/README-QUICKSTART.md" << EOF
+          # Quick Start (Linux kernel ${TARGET_KERNEL_BASE}.x)
+
+          This package contains prebuilt binaries for:
+          - amd64 (x86_64)
+          - arm64 (aarch64)
+
+          Version: ${RELEASE_VERSION}
+
+          ## 1) Choose architecture
+
+          On target machine:
+
+          ```bash
+          uname -m
+          ```
+
+          Use:
+          - `amd64/` for `x86_64`
+          - `arm64/` for `aarch64`
+
+          ## 2) Install kernel module
+
+          ```bash
+          sudo insmod <arch>/elf_det.ko
+          lsmod | grep elf_det
+          ```
+
+          If Secure Boot is enabled, module signing may be required.
+
+          ## 3) Run user program
+
+          ```bash
+          ./<arch>/proc_elf_ctrl
+          ```
+
+          ## 4) Unload module
+
+          ```bash
+          sudo rmmod elf_det
+          ```
+          EOF
+
+          tar -czf "$ARCHIVE_PATH" -C dist "$PKG_NAME"
+          sha256sum "$ARCHIVE_PATH" > "${ARCHIVE_PATH}.sha256"
+
+          echo "archive_path=$ARCHIVE_PATH" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=${ARCHIVE_PATH}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        env:
+          TAG: ${{ needs.prepare_release.outputs.release_tag }}
+        run: |
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping tag creation"
+            exit 0
+          fi
+
           git tag -a "$TAG" -m "Release $TAG"
           git push origin "$TAG"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.new_version.outputs.tag }}
-          name: Release ${{ steps.new_version.outputs.tag }}
-          body_path: /tmp/release_notes.md
+          tag_name: ${{ needs.prepare_release.outputs.release_tag }}
+          name: Release ${{ needs.prepare_release.outputs.release_tag }}
+          body_path: dist/artifacts/release-metadata/release_notes.md
+          files: |
+            ${{ steps.package.outputs.archive_path }}
+            ${{ steps.package.outputs.checksum_path }}
           draft: false
           prerelease: false
