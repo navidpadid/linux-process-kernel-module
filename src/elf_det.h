@@ -4,16 +4,67 @@
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/if.h>
+#include <linux/string.h>
 typedef u64 eh_u64;
 #else
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
 #endif
 typedef unsigned long long u64;
 typedef u64 eh_u64;
 #endif
+
+/* Copy PID input from proc write into destination buffer safely.
+ * Clears destination to avoid stale bytes from previous writes.
+ * Returns bytes copied from src.
+ */
+static inline size_t update_pid_write_buffer(char *dst,
+					     size_t dst_size,
+					     const char *src,
+					     size_t src_len)
+{
+	size_t copy_len;
+
+	if (!dst || !src || dst_size == 0)
+		return 0;
+
+	copy_len = (src_len < (dst_size - 1)) ? src_len : (dst_size - 1);
+	memset(dst, 0, dst_size);
+	memcpy(dst, src, copy_len);
+	dst[copy_len] = '\0';
+
+	return copy_len;
+}
+
+/* Toggle procfile read state.
+ * Returns 1 when read should return EOF, 0 when data should be emitted.
+ */
+static inline int procfile_read_should_finish(int *finished)
+{
+	if (!finished)
+		return 1;
+
+	if (*finished) {
+		*finished = 0;
+		return 1;
+	}
+
+	*finished = 1;
+	return 0;
+}
+
+/* Format procfile read output into caller-provided buffer. */
+static inline int
+format_procfile_output(const char *src, char *out, int out_size)
+{
+	if (!src || !out || out_size <= 0)
+		return 0;
+
+	return snprintf(out, out_size, "buff variable : %s\n", src);
+}
 
 /* Compute CPU usage permyriad (percent * 100) from total_ns and delta_ns */
 static inline eh_u64 compute_usage_permyriad(eh_u64 total_ns, eh_u64 delta_ns)

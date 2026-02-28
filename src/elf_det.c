@@ -696,14 +696,12 @@ static ssize_t procfile_read(struct file *file,
 
 	pr_info("procfile read called\n");
 
-	if (finished) {
+	if (procfile_read_should_finish(&finished)) {
 		pr_info("procfs read: END\n");
-		finished = 0;
 		return 0;
 	}
 
-	finished = 1;
-	len = snprintf(tmp, sizeof(tmp), "buff variable : %s\n", buff);
+	len = format_procfile_output(buff, tmp, sizeof(tmp));
 	if (len < 0)
 		return -EFAULT;
 	if (len > length)
@@ -719,15 +717,15 @@ static ssize_t procfile_write(struct file *file,
 			      size_t length,
 			      loff_t *offset)
 {
+	char input_buf[sizeof(buff)];
 	size_t to_copy;
 
-	to_copy = min(length, sizeof(buff) - 1);
-	memset(buff, 0, sizeof(buff));
+	to_copy = min(length, sizeof(input_buf));
 
-	if (copy_from_user(buff, buffer, to_copy))
+	if (copy_from_user(input_buf, buffer, to_copy))
 		return -EFAULT;
 
-	buff[to_copy] = '\0';
+	update_pid_write_buffer(buff, sizeof(buff), input_buf, to_copy);
 	pr_info("procfs_write called\n");
 	return length;
 }

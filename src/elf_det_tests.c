@@ -534,6 +534,41 @@ int main(void)
 	add_netdev_count(devs, &dev_len, ELF_DET_NETDEV_MAX, 999, "extra");
 	assert(dev_len == ELF_DET_NETDEV_MAX);
 
+	/* procfile write/read logic tests */
+	{
+		char pid_buf[20];
+		size_t copied;
+		char out_buf[64];
+		int finished_state;
+
+		copied = update_pid_write_buffer(pid_buf, sizeof(pid_buf),
+						 "12345", 5);
+		assert(copied == 5);
+		assert(strcmp(pid_buf, "12345") == 0);
+
+		copied = update_pid_write_buffer(pid_buf, sizeof(pid_buf), "1",
+						 1);
+		assert(copied == 1);
+		assert(strcmp(pid_buf, "1") == 0);
+		assert(pid_buf[1] == '\0');
+
+		copied = update_pid_write_buffer(pid_buf, sizeof(pid_buf),
+						 "1234567890123456789012345",
+						 25);
+		assert(copied == sizeof(pid_buf) - 1);
+		assert(pid_buf[sizeof(pid_buf) - 1] == '\0');
+
+		finished_state = 0;
+		assert(procfile_read_should_finish(&finished_state) == 0);
+		assert(finished_state == 1);
+		assert(procfile_read_should_finish(&finished_state) == 1);
+		assert(finished_state == 0);
+
+		assert(format_procfile_output("42", out_buf, sizeof(out_buf)) >
+		       0);
+		assert(strcmp(out_buf, "buff variable : 42\n") == 0);
+	}
+
 	puts("elf_helpers tests passed");
 	puts("memory_pressure tests passed");
 	puts("socket_helpers tests passed");
